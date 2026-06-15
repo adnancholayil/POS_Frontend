@@ -10,6 +10,7 @@ export const useToast = () => {
 
   return {
     toast,
+    addToast: toast,
     success: (msg, dur) => toast(msg, 'success', dur),
     error:   (msg, dur) => toast(msg, 'error', dur),
     warning: (msg, dur) => toast(msg, 'warning', dur),
