@@ -67,7 +67,11 @@ export const Login = () => {
   const fillQuickLogin = (email, password, shopCode) => {
     setValue('email', email);
     setValue('password', password);
-    if (shopCode) setValue('tenantId', shopCode);
+    if (shopCode) {
+      setValue('tenantId', shopCode);
+      localStorage.setItem('shopCode', shopCode);
+      setSavedShopCode(shopCode);
+    }
   };
 
   return (
@@ -109,6 +113,18 @@ export const Login = () => {
             icon={<FiHash />}
             {...register('tenantId', { required: 'Shop Code is required' })}
           />
+          {/* Show saved shop code if present */}
+          {savedShopCode && (
+            <p className="mt-1 text-xs text-gray-600 dark:text-gray-400">
+              📌 Your saved Shop Code: <span className="font-medium">{savedShopCode}</span>
+            </p>
+          )}
+          {/* If no saved code, show helper */}
+          {!savedShopCode && (
+            <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+              Need a Shop Code? <Link to="/register" className="font-medium text-blue-600 dark:text-blue-400 underline">Register a new shop</Link>.
+            </p>
+          )}
           {savedShopCode && (
             <p className="mt-1 text-xs text-gray-600 dark:text-gray-400">
               📌 Your saved Shop Code: <span className="font-medium">{savedShopCode}</span>
