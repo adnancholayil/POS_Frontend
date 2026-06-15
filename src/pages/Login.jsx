@@ -29,9 +29,13 @@ export const Login = () => {
   const handleLogin = async (data) => {
     setIsSubmitting(true);
     dispatch(setLoading(true));
+    // Show a loading toast if the request takes >5s (backend cold start)
+    const delayedToastId = setTimeout(() => {
+      addToast('Waking up server, please wait…', 'info');
+    }, 5000);
     try {
       const response = await authApi.login(data);
-
+      clearTimeout(delayedToastId);
       // Save shop code locally if remember-me checked
       if (data.rememberShop && data.tenantId) {
         localStorage.setItem('shopCode', data.tenantId.trim().toUpperCase());
@@ -43,6 +47,7 @@ export const Login = () => {
       addToast(`Welcome back, ${response.data.user.name}! 🎉`, 'success');
       navigate('/dashboard');
     } catch (err) {
+      clearTimeout(delayedToastId);
       const errMsg =
         err?.response?.data?.message ||
         err?.message ||
