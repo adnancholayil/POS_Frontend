@@ -15,7 +15,7 @@ export const ResetPassword = () => {
   const { register, handleSubmit, watch, formState: { errors } } = useForm({
     defaultValues: {
       email: location.state?.email || '',
-      tenantId: location.state?.tenantId || localStorage.getItem('tenantId') || '',
+      tenantId: location.state?.tenantId || localStorage.getItem('shopCode') || '',
     }
   });
 
@@ -74,11 +74,12 @@ export const ResetPassword = () => {
           if (firstError?.message) addToast(firstError.message, 'error');
         })} className="space-y-4">
           <Input
-            label="Shop ID / Tenant ID"
+            label="Shop Code"
             type="text"
-            placeholder="Enter Shop ID"
+            placeholder="e.g.  A3BX7K"
+            hint="Your 6-character shop code"
             error={errors.tenantId?.message}
-            {...register('tenantId', { required: 'Shop ID is required' })}
+            {...register('tenantId', { required: 'Shop Code is required' })}
           />
 
           <Input

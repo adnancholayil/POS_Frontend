@@ -23,7 +23,6 @@ export const Register = () => {
     setIsSubmitting(true);
     dispatch(setLoading(true));
     try {
-      // Structure the data as expected by authApi.register
       const payload = {
         name: data.name,
         email: data.email,
@@ -32,20 +31,22 @@ export const Register = () => {
         role: data.role,
         shopName: data.shopName,
       };
-      
+
       const response = await authApi.register(payload);
-      
-      // Seed credentials in store if auto-logged in
-      if (response.data?.token || response.data?.accessToken) {
-        dispatch(setCredentials(response.data));
+      const shopCode = response.data?.shopCode;
+
+      if (shopCode) {
+        addToast(`✅ Account created! Your Shop Code is: ${shopCode} — save this, you'll need it to log in.`, 'success', 10000);
+      } else {
+        addToast('Registration successful! You can now log in.', 'success');
       }
-      
-      addToast(response.data?.message || 'Registration successful! Please check your email to verify your account.', 'success');
-      
-      // Navigate to login page so they can log in once verified
+
       navigate('/login');
     } catch (err) {
-      const errMsg = err?.message || 'Registration failed. Please try again.';
+      const errMsg =
+        err?.response?.data?.message ||
+        err?.message ||
+        'Registration failed. Please try again.';
       dispatch(setError(errMsg));
       addToast(errMsg, 'error');
     } finally {

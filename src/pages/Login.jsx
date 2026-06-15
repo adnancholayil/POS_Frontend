@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { useDispatch, useSelector } from 'react-redux';
+import { useDispatch } from 'react-redux';
 import { motion } from 'framer-motion';
-import { FiMail, FiLock, FiSmartphone, FiShield, FiUser } from 'react-icons/fi';
+import { FiMail, FiLock, FiSmartphone, FiHash, FiShield, FiUser } from 'react-icons/fi';
 import { useForm } from 'react-hook-form';
 import { authApi } from '../api/services';
 import { setCredentials, setError, setLoading } from '../features/auth/authSlice';
@@ -17,13 +17,12 @@ export const Login = () => {
   const { isDark } = useTheme();
   const { addToast } = useToast();
   const { register, handleSubmit, setValue, formState: { errors } } = useForm();
-
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   React.useEffect(() => {
-    const savedTenantId = localStorage.getItem('tenantId');
-    if (savedTenantId) {
-      setValue('tenantId', savedTenantId);
+    const savedCode = localStorage.getItem('shopCode');
+    if (savedCode) {
+      setValue('tenantId', savedCode);
     }
   }, [setValue]);
 
@@ -32,11 +31,22 @@ export const Login = () => {
     dispatch(setLoading(true));
     try {
       const response = await authApi.login(data);
+
+      // Save shop code locally if remember-me checked
+      if (data.rememberShop && data.tenantId) {
+        localStorage.setItem('shopCode', data.tenantId.trim().toUpperCase());
+      } else {
+        localStorage.removeItem('shopCode');
+      }
+
       dispatch(setCredentials(response.data));
-      addToast('Welcome back, ' + response.data.user.name + '!', 'success');
+      addToast(`Welcome back, ${response.data.user.name}! 🎉`, 'success');
       navigate('/dashboard');
     } catch (err) {
-      const errMsg = err?.message || 'Invalid email, password or Shop ID';
+      const errMsg =
+        err?.response?.data?.message ||
+        err?.message ||
+        'Invalid email, password or Shop Code';
       dispatch(setError(errMsg));
       addToast(errMsg, 'error');
     } finally {
@@ -45,12 +55,10 @@ export const Login = () => {
     }
   };
 
-  const fillQuickLogin = (email, password, tenantId) => {
+  const fillQuickLogin = (email, password, shopCode) => {
     setValue('email', email);
     setValue('password', password);
-    if (tenantId) {
-      setValue('tenantId', tenantId);
-    }
+    if (shopCode) setValue('tenantId', shopCode);
   };
 
   return (
@@ -71,35 +79,45 @@ export const Login = () => {
           </div>
           <h1 className="text-2xl font-black text-slate-800 dark:text-slate-100 tracking-tight">Galaxy POS</h1>
           <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 text-center">
-            SaaS Mobile & Laptop Retail Shop Management Terminal
+            SaaS Mobile &amp; Laptop Retail Shop Management Terminal
           </p>
         </div>
 
-        <form onSubmit={handleSubmit(handleLogin, (errors) => {
-          const firstError = Object.values(errors)[0];
-          if (firstError?.message) addToast(firstError.message, 'error');
-        })} className="space-y-4">
+        <form
+          onSubmit={handleSubmit(handleLogin, (errs) => {
+            const firstError = Object.values(errs)[0];
+            if (firstError?.message) addToast(firstError.message, 'error');
+          })}
+          className="space-y-4"
+        >
+          {/* Shop Code */}
           <Input
-            label="Shop ID / Tenant ID"
+            label="Shop Code"
             type="text"
-            placeholder="Enter your Shop ID"
+            placeholder="e.g.  A3BX7K"
+            hint="Your 6-character code received on registration"
             error={errors.tenantId?.message}
-            icon={<FiShield />}
-            {...register('tenantId', { required: 'Shop ID / Tenant ID is required' })}
+            icon={<FiHash />}
+            {...register('tenantId', { required: 'Shop Code is required' })}
           />
 
+          {/* Email */}
           <Input
             label="Email Address"
             type="email"
-            placeholder="name@zylox.com"
+            placeholder="name@yourshop.com"
             error={errors.email?.message}
             icon={<FiMail />}
             {...register('email', {
               required: 'Email is required',
-              pattern: { value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i, message: 'Invalid email address' }
+              pattern: {
+                value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
+                message: 'Invalid email address',
+              },
             })}
           />
 
+          {/* Password with show/hide toggle */}
           <Input
             label="Password"
             type="password"
@@ -108,12 +126,25 @@ export const Login = () => {
             icon={<FiLock />}
             {...register('password', {
               required: 'Password is required',
-              minLength: { value: 4, message: 'Password must be at least 4 characters' }
+              minLength: { value: 4, message: 'Password must be at least 4 characters' },
             })}
           />
 
-          <div className="text-right">
-            <Link to="/forgot-password" className="text-xs font-semibold text-blue-600 dark:text-blue-400 hover:underline">
+          {/* Remember Shop Code + Forgot Password */}
+          <div className="flex items-center justify-between">
+            <label className="flex items-center gap-2 cursor-pointer select-none">
+              <input
+                id="rememberShop"
+                type="checkbox"
+                className="w-3.5 h-3.5 rounded border-slate-300 text-blue-600 cursor-pointer"
+                {...register('rememberShop')}
+              />
+              <span className="text-xs text-slate-500 dark:text-slate-400">Remember Shop Code</span>
+            </label>
+            <Link
+              to="/forgot-password"
+              className="text-xs font-semibold text-blue-600 dark:text-blue-400 hover:underline"
+            >
               Forgot Password?
             </Link>
           </div>
@@ -130,26 +161,31 @@ export const Login = () => {
 
         <div className="relative flex py-4 items-center">
           <div className="flex-grow border-t border-slate-200 dark:border-slate-800"></div>
-          <span className="flex-shrink mx-4 text-[10px] text-slate-400 font-bold uppercase tracking-wider">Demo Access</span>
+          <span className="flex-shrink mx-4 text-[10px] text-slate-400 font-bold uppercase tracking-wider">
+            Demo Access
+          </span>
           <div className="flex-grow border-t border-slate-200 dark:border-slate-800"></div>
         </div>
 
         <div className="grid grid-cols-2 gap-2 mt-2">
           <button
+            type="button"
             onClick={() => fillQuickLogin('admin@zylox.com', 'admin123')}
             className="flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-bold text-slate-700 dark:text-slate-300 bg-slate-100 dark:bg-slate-800/60 hover:bg-slate-200 dark:hover:bg-slate-800 rounded-lg transition-colors border border-slate-200/50 dark:border-slate-800/40"
           >
             <FiShield className="text-xs text-blue-500" /> Admin
           </button>
           <button
+            type="button"
             onClick={() => fillQuickLogin('salesman@zylox.com', 'sales123')}
             className="flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-bold text-slate-700 dark:text-slate-300 bg-slate-100 dark:bg-slate-800/60 hover:bg-slate-200 dark:hover:bg-slate-800 rounded-lg transition-colors border border-slate-200/50 dark:border-slate-800/40"
           >
             <FiUser className="text-xs text-indigo-500" /> Salesman
           </button>
         </div>
+
         <div className="text-center mt-6 text-xs text-slate-500 dark:text-slate-400">
-          Don't have a shop account?{' '}
+          Don&apos;t have a shop account?{' '}
           <Link to="/register" className="font-bold text-blue-600 dark:text-blue-400 hover:underline">
             Register Shop
           </Link>
@@ -158,4 +194,5 @@ export const Login = () => {
     </div>
   );
 };
+
 export default Login;

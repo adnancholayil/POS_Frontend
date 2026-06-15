@@ -52,7 +52,7 @@ export const ForgotPassword = () => {
           </div>
           <h1 className="text-2xl font-black text-slate-800 dark:text-slate-100 tracking-tight">Forgot Password?</h1>
           <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 text-center leading-normal">
-            No worries! Enter your Shop ID and registered email address to receive a password reset OTP.
+            No worries! Enter your Shop Code and registered email address to receive a password reset OTP.
           </p>
         </div>
 
@@ -61,12 +61,13 @@ export const ForgotPassword = () => {
           if (firstError?.message) addToast(firstError.message, 'error');
         })} className="space-y-4">
           <Input
-            label="Shop ID / Tenant ID"
+            label="Shop Code"
             type="text"
-            placeholder="Enter your Shop ID"
+            placeholder="e.g.  A3BX7K"
+            hint="Your 6-character shop code"
             error={errors.tenantId?.message}
-            defaultValue={localStorage.getItem('tenantId') || ''}
-            {...register('tenantId', { required: 'Shop ID / Tenant ID is required' })}
+            defaultValue={localStorage.getItem('shopCode') || ''}
+            {...register('tenantId', { required: 'Shop Code is required' })}
           />
 
           <Input

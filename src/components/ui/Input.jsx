@@ -5,12 +5,14 @@ import { FiEye, FiEyeOff } from 'react-icons/fi';
 // ─── INPUT ────────────────────────────────────────────────────
 export const Input = forwardRef(({
   label, error, hint, icon, iconRight, size = 'md',
+  // Extract type so we can control it — this prevents react-hook-form's spread from overriding inputType
+  type: propType = 'text',
   className = '', containerClass = '', required = false, ...props
 }, ref) => {
   const sizeClass = { sm: 'py-1.5 text-xs', md: 'py-2 text-sm', lg: 'py-2.5 text-sm' }[size];
-  const isPassword = props.type === 'password';
+  const isPassword = propType === 'password';
   const [showPassword, setShowPassword] = useState(false);
-  const inputType = isPassword ? (showPassword ? 'text' : 'password') : props.type;
+  const inputType = isPassword ? (showPassword ? 'text' : 'password') : propType;
 
   const togglePassword = (e) => {
     e.preventDefault();
@@ -43,6 +45,7 @@ export const Input = forwardRef(({
         <input
           ref={ref}
           type={inputType}
+          {...props}
           className={cn(
             'w-full bg-white dark:bg-slate-800 border rounded-lg text-slate-800 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 outline-none transition-all duration-150',
             'focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500',
@@ -52,7 +55,6 @@ export const Input = forwardRef(({
             sizeClass,
             className
           )}
-          {...props}
         />
         {rightIconElement}
       </div>
