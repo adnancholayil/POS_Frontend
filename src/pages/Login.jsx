@@ -18,6 +18,8 @@ export const Login = () => {
   const { addToast } = useToast();
   const { register, handleSubmit, setValue, formState: { errors } } = useForm();
 
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
   React.useEffect(() => {
     const savedTenantId = localStorage.getItem('tenantId');
     if (savedTenantId) {
