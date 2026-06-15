@@ -11,6 +11,7 @@ import { toggleSidebar, toggleSidebarCollapse } from '../../features/ui/uiSlice'
 import { markAllAsRead, markAsRead, selectNotifications, selectUnreadCount } from '../../features/notifications/notificationSlice';
 import { useSelector } from 'react-redux';
 import { useAuth } from '../../hooks/useAuth';
+import { notificationApi } from '../../api/services';
 import { useTheme } from '../../hooks/useTheme';
 import { Avatar, CountBadge } from '../ui/Badge';
 import { cn, timeAgo } from '../../utils/helpers';
@@ -71,6 +72,24 @@ export const Navbar = ({ onMenuClick }) => {
     navigate('/login');
   };
 
+  const handleMarkAsRead = async (id) => {
+    try {
+      await notificationApi.markRead(id);
+      dispatch(markAsRead(id));
+    } catch (err) {
+      console.error('Failed to mark notification as read:', err);
+    }
+  };
+
+  const handleMarkAllAsRead = async () => {
+    try {
+      await notificationApi.markAllRead();
+      dispatch(markAllAsRead());
+    } catch (err) {
+      console.error('Failed to mark all notifications as read:', err);
+    }
+  };
+
   return (
     <header className="sticky top-0 z-30 h-16 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border-b border-slate-100 dark:border-slate-800 flex items-center px-4 gap-3">
       {/* Hamburger */}
@@ -122,7 +141,7 @@ export const Navbar = ({ onMenuClick }) => {
               <span className="text-sm font-bold text-slate-800 dark:text-slate-100">Notifications</span>
               {unreadCount > 0 && (
                 <button
-                  onClick={() => dispatch(markAllAsRead())}
+                  onClick={handleMarkAllAsRead}
                   className="text-xs text-blue-600 dark:text-blue-400 hover:underline font-medium flex items-center gap-1"
                 >
                   <FiCheck className="text-xs" /> Mark all read
@@ -134,7 +153,7 @@ export const Navbar = ({ onMenuClick }) => {
                 <div className="py-8 text-center text-sm text-slate-400">No notifications</div>
               ) : (
                 notifications.slice(0, 10).map((n) => (
-                  <NotificationItem key={n.id} item={n} onRead={(id) => dispatch(markAsRead(id))} />
+                  <NotificationItem key={n.id} item={n} onRead={handleMarkAsRead} />
                 ))
               )}
             </div>
@@ -159,7 +178,7 @@ export const Navbar = ({ onMenuClick }) => {
             <Avatar name={user?.name || 'User'} size="sm" />
             <div className="hidden sm:block text-left">
               <p className="text-xs font-semibold text-slate-700 dark:text-slate-200 leading-none">{user?.name || 'User'}</p>
-              <p className="text-[10px] text-slate-400 capitalize mt-0.5">{user?.role || 'staff'}</p>
+              <p className="text-[10px] text-slate-400 capitalize mt-0.5">{ (typeof user?.role === 'object' && user?.role !== null ? user?.role?.name : user?.role) || 'staff' }</p>
             </div>
             <FiChevronDown className="text-xs text-slate-400 hidden sm:block" />
           </button>

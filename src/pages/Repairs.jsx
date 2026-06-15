@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
+import { useLocation, useNavigate } from 'react-router-dom';
 import {
   FiTool, FiPlusCircle, FiUser, FiActivity, FiCpu,
   FiTrendingUp, FiSearch, FiEdit, FiTrash, FiCheck, FiSettings, FiPlus
@@ -18,9 +19,19 @@ import { REPAIR_STATUS, REPAIR_STATUS_LABELS, REPAIR_STATUS_COLORS } from '../ut
 export const Repairs = () => {
   const queryClient = useQueryClient();
   const { addToast } = useToast();
+  const location = useLocation();
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('tickets'); // 'tickets' | 'new'
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
+
+  React.useEffect(() => {
+    if (location.pathname.endsWith('/new')) {
+      setActiveTab('new');
+    } else {
+      setActiveTab('tickets');
+    }
+  }, [location.pathname]);
 
   // Modals state
   const [selectedTicket, setSelectedTicket] = useState(null);
@@ -56,7 +67,7 @@ export const Repairs = () => {
       queryClient.invalidateQueries({ queryKey: ['repairStats'] });
       addToast('Repair ticket registered successfully', 'success');
       resetNew();
-      setActiveTab('tickets');
+      navigate('/repairs');
     },
     onError: () => addToast('Failed to log repair ticket', 'error'),
   });
@@ -188,7 +199,7 @@ export const Repairs = () => {
           <Button
             variant={activeTab === 'new' ? 'secondary' : 'primary'}
             className="rounded-xl px-4 py-2 flex items-center gap-2 shadow-sm"
-            onClick={() => setActiveTab(activeTab === 'tickets' ? 'new' : 'tickets')}
+            onClick={() => navigate(activeTab === 'tickets' ? '/repairs/new' : '/repairs')}
           >
             {activeTab === 'tickets' ? <><FiPlusCircle /> New Ticket Intake</> : <><FiTool /> View Tickets</>}
           </Button>

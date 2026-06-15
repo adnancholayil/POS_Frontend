@@ -68,7 +68,10 @@ const authSlice = createSlice({
 export const { setCredentials, setToken, logout, setLoading, setError, updateUser, setTenantId } = authSlice.actions;
 export const selectCurrentUser = (state) => state.auth.user;
 export const selectIsAuthenticated = (state) => state.auth.isAuthenticated;
-export const selectUserRole = (state) => state.auth.user?.role;
+export const selectUserRole = (state) => {
+  const role = state.auth.user?.role;
+  return typeof role === 'object' && role !== null ? role.name : role;
+};
 export const selectToken = (state) => state.auth.token;
 export const selectTenantId = (state) => state.auth.tenantId;
 export default authSlice.reducer;

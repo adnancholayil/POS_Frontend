@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
+import { useLocation, useNavigate } from 'react-router-dom';
 import {
   FiBox, FiPlus, FiEdit2, FiTrash2, FiSearch,
   FiAlertTriangle, FiCheckCircle, FiShare2, FiFolder
@@ -18,12 +19,34 @@ import { PRODUCT_CATEGORIES } from '../utils/constants';
 export const Products = () => {
   const queryClient = useQueryClient();
   const { addToast } = useToast();
+  const location = useLocation();
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('products'); // 'products' | 'categories'
   const [search, setSearch] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('');
 
   // Modals state
   const [isAddOpen, setIsAddOpen] = useState(false);
+
+  React.useEffect(() => {
+    if (location.pathname.endsWith('/categories')) {
+      setActiveTab('categories');
+      setIsAddOpen(false);
+    } else if (location.pathname.endsWith('/add')) {
+      setActiveTab('products');
+      setIsAddOpen(true);
+    } else {
+      setActiveTab('products');
+      setIsAddOpen(false);
+    }
+  }, [location.pathname]);
+
+  const handleCloseAdd = () => {
+    setIsAddOpen(false);
+    if (location.pathname.endsWith('/add')) {
+      navigate('/products');
+    }
+  };
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState(null);
   const [deleteProduct, setDeleteProduct] = useState(null);
@@ -171,7 +194,7 @@ export const Products = () => {
           <p className="text-xs text-slate-500 dark:text-slate-400">View and update inventory models, prices, and stock indicators.</p>
         </div>
         <div className="flex gap-2">
-          <Button variant="primary" className="rounded-xl px-4 py-2 flex items-center gap-2 shadow-sm" onClick={() => setIsAddOpen(true)}>
+          <Button variant="primary" className="rounded-xl px-4 py-2 flex items-center gap-2 shadow-sm" onClick={() => navigate('/products/add')}>
             <FiPlus /> Add Product
           </Button>
         </div>
@@ -180,7 +203,7 @@ export const Products = () => {
       {/* Tabs */}
       <div className="flex border-b border-slate-200 dark:border-slate-800 gap-4">
         <button
-          onClick={() => setActiveTab('products')}
+          onClick={() => navigate('/products')}
           className={`pb-3 text-sm font-bold border-b-2 transition-all px-1 flex items-center gap-2 ${
             activeTab === 'products'
               ? 'border-blue-600 text-blue-600 dark:text-blue-400'
@@ -190,7 +213,7 @@ export const Products = () => {
           <FiBox /> Products List
         </button>
         <button
-          onClick={() => setActiveTab('categories')}
+          onClick={() => navigate('/products/categories')}
           className={`pb-3 text-sm font-bold border-b-2 transition-all px-1 flex items-center gap-2 ${
             activeTab === 'categories'
               ? 'border-blue-600 text-blue-600 dark:text-blue-400'
@@ -255,7 +278,7 @@ export const Products = () => {
       )}
 
       {/* Add Product Modal */}
-      <Modal isOpen={isAddOpen} onClose={() => setIsAddOpen(false)} title="Add New Product Intake" size="lg">
+      <Modal isOpen={isAddOpen} onClose={handleCloseAdd} title="Add New Product Intake" size="lg">
         <form onSubmit={handleAddSubmit(handleCreate)} className="p-6 space-y-4">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Input
@@ -333,7 +356,7 @@ export const Products = () => {
           </div>
 
           <div className="flex gap-3 justify-end pt-4 border-t border-slate-100 dark:border-slate-800">
-            <Button variant="secondary" className="rounded-xl px-5" onClick={() => setIsAddOpen(false)} type="button">Cancel</Button>
+            <Button variant="secondary" className="rounded-xl px-5" onClick={handleCloseAdd} type="button">Cancel</Button>
             <Button type="submit" variant="primary" className="rounded-xl px-5" loading={createMutation.isPending}>Add Product</Button>
           </div>
         </form>

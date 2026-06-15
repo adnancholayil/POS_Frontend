@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
+import { useLocation, useNavigate } from 'react-router-dom';
 import {
   FiPackage, FiPlusCircle, FiMinusCircle, FiAlertCircle,
   FiActivity, FiSearch, FiCheck, FiArrowRight
@@ -16,7 +17,23 @@ import { formatCurrency, formatDateTime } from '../utils/helpers';
 export const Inventory = () => {
   const queryClient = useQueryClient();
   const { addToast } = useToast();
+  const location = useLocation();
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('overview'); // 'overview' | 'in' | 'out' | 'low' | 'history'
+
+  React.useEffect(() => {
+    if (location.pathname.endsWith('/stock-in')) {
+      setActiveTab('in');
+    } else if (location.pathname.endsWith('/stock-out')) {
+      setActiveTab('out');
+    } else if (location.pathname.endsWith('/low-stock')) {
+      setActiveTab('low');
+    } else if (location.pathname.endsWith('/history')) {
+      setActiveTab('history');
+    } else {
+      setActiveTab('overview');
+    }
+  }, [location.pathname]);
   const [search, setSearch] = useState('');
 
   // Forms
@@ -48,7 +65,7 @@ export const Inventory = () => {
       queryClient.invalidateQueries({ queryKey: ['inventoryHistory'] });
       addToast('Stock received and updated successfully', 'success');
       resetIn();
-      setActiveTab('overview');
+      navigate('/inventory');
     },
     onError: () => addToast('Failed to log stock in', 'error'),
   });
@@ -61,7 +78,7 @@ export const Inventory = () => {
       queryClient.invalidateQueries({ queryKey: ['inventoryHistory'] });
       addToast('Stock adjusted out successfully', 'success');
       resetOut();
-      setActiveTab('overview');
+      navigate('/inventory');
     },
     onError: () => addToast('Failed to log stock out', 'error'),
   });
@@ -139,7 +156,16 @@ export const Inventory = () => {
         ].map((t) => (
           <button
             key={t.id}
-            onClick={() => setActiveTab(t.id)}
+            onClick={() => {
+              const paths = {
+                overview: '/inventory',
+                in: '/inventory/stock-in',
+                out: '/inventory/stock-out',
+                low: '/inventory/low-stock',
+                history: '/inventory/history'
+              };
+              navigate(paths[t.id]);
+            }}
             className={`pb-3 text-sm font-bold border-b-2 transition-all px-1.5 flex items-center gap-2 ${
               activeTab === t.id
                 ? 'border-blue-600 text-blue-600 dark:text-blue-400'

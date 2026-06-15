@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useForm, useWatch } from 'react-hook-form';
+import { useLocation, useNavigate } from 'react-router-dom';
 import {
   FiRepeat, FiPlusCircle, FiSearch, FiDollarSign,
   FiUser, FiCpu, FiCheck, FiCpu as FiImei, FiBookOpen
@@ -18,8 +19,18 @@ import { DEVICE_CONDITIONS } from '../utils/constants';
 export const SecondHand = () => {
   const queryClient = useQueryClient();
   const { addToast } = useToast();
+  const location = useLocation();
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('inventory'); // 'inventory' | 'buy'
   const [search, setSearch] = useState('');
+
+  React.useEffect(() => {
+    if (location.pathname.endsWith('/buy')) {
+      setActiveTab('buy');
+    } else {
+      setActiveTab('inventory');
+    }
+  }, [location.pathname]);
 
   // Modals state
   const [sellingItem, setSellingItem] = useState(null);
@@ -62,7 +73,7 @@ export const SecondHand = () => {
       queryClient.invalidateQueries({ queryKey: ['secondHandDevices'] });
       addToast('Pre-owned device buy-back logged', 'success');
       resetBuy();
-      setActiveTab('inventory');
+      navigate('/second-hand');
     },
     onError: () => addToast('Failed to log intake', 'error'),
   });
@@ -145,7 +156,7 @@ export const SecondHand = () => {
           <Button
             variant={activeTab === 'buy' ? 'secondary' : 'primary'}
             className="rounded-xl px-4 py-2 flex items-center gap-2 shadow-sm"
-            onClick={() => setActiveTab(activeTab === 'inventory' ? 'buy' : 'inventory')}
+            onClick={() => navigate(activeTab === 'inventory' ? '/second-hand/buy' : '/second-hand')}
           >
             {activeTab === 'inventory' ? <><FiPlusCircle /> Device Buy-Back</> : <><FiRepeat /> View Pre-owned Inventory</>}
           </Button>

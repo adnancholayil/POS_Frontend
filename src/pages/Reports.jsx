@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import { useLocation, useNavigate } from 'react-router-dom';
 import {
   FiBarChart2, FiTrendingUp, FiTrendingDown,
   FiShoppingCart, FiTool, FiBriefcase, FiDownload
@@ -14,7 +15,19 @@ import {
 } from 'recharts';
 
 export const Reports = () => {
+  const location = useLocation();
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('sales'); // 'sales' | 'profit' | 'repairs'
+
+  React.useEffect(() => {
+    if (location.pathname.endsWith('/profit')) {
+      setActiveTab('profit');
+    } else if (location.pathname.endsWith('/repairs')) {
+      setActiveTab('repairs');
+    } else {
+      setActiveTab('sales');
+    }
+  }, [location.pathname]);
 
   // Queries
   const { data: salesReport, isLoading: isLoadingSales } = useQuery({
@@ -60,7 +73,7 @@ export const Reports = () => {
         ].map((t) => (
           <button
             key={t.id}
-            onClick={() => setActiveTab(t.id)}
+            onClick={() => navigate(t.id === 'sales' ? '/reports' : `/reports/${t.id}`)}
             className={`pb-3 text-sm font-bold border-b-2 transition-all px-1 flex items-center gap-2 ${
               activeTab === t.id
                 ? 'border-blue-600 text-blue-600 dark:text-blue-400'

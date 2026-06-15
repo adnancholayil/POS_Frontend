@@ -10,8 +10,9 @@ const notificationSlice = createSlice({
   initialState,
   reducers: {
     addNotification: (state, action) => {
-      state.items.unshift({ id: Date.now(), read: false, createdAt: new Date().toISOString(), ...action.payload });
-      state.unreadCount += 1;
+      const id = action.payload.id || action.payload._id || Date.now();
+      state.items.unshift({ id, read: action.payload.read || false, createdAt: action.payload.createdAt || new Date().toISOString(), ...action.payload });
+      state.unreadCount += action.payload.read ? 0 : 1;
     },
     markAsRead: (state, action) => {
       const n = state.items.find((i) => i.id === action.payload);

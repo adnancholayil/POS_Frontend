@@ -1,5 +1,7 @@
 @import "tailwindcss";
 
+@custom-variant dark (&:where(.dark, .dark *));
+
 /* ============================================================
    CSS CUSTOM PROPERTIES — Light & Dark Theme Tokens
    ============================================================ */
@@ -46,7 +48,7 @@
 
 html {
   font-family: 'Montserrat', sans-serif;
-  font-size: 14px;
+  font-size: 16px;
   scroll-behavior: smooth;
 }
 
@@ -76,6 +78,13 @@ body {
    TYPOGRAPHY UTILITIES
    ============================================================ */
 .text-balance { text-wrap: balance; }
+
+/* Custom overrides to soften very bold text weights into a medium-bold look */
+.font-black,
+.font-extrabold,
+.font-bold {
+  font-weight: 600 !important; /* Set very bold weights to clean SemiBold (600) */
+}
 
 /* ============================================================
    LAYOUT UTILITIES

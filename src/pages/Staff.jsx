@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
+import { useLocation, useNavigate } from 'react-router-dom';
 import {
   FiUsers, FiPlus, FiCalendar, FiTrendingUp,
   FiClock, FiAward, FiCheck, FiMail, FiPhone, FiSearch
@@ -18,9 +19,21 @@ import { ROLE_LABELS } from '../utils/constants';
 export const Staff = () => {
   const queryClient = useQueryClient();
   const { addToast } = useToast();
+  const location = useLocation();
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('directory'); // 'directory' | 'attendance' | 'performance'
   const [search, setSearch] = useState('');
   const [selectedStaffId, setSelectedStaffId] = useState('staff2'); // Default to technician Malhotra
+
+  React.useEffect(() => {
+    if (location.pathname.endsWith('/attendance')) {
+      setActiveTab('attendance');
+    } else if (location.pathname.endsWith('/performance')) {
+      setActiveTab('performance');
+    } else {
+      setActiveTab('directory');
+    }
+  }, [location.pathname]);
 
   // Forms
   const { register: registerAdd, handleSubmit: handleSubmitAdd, reset: resetAdd, formState: { errors: errorsAdd } } = useForm();
@@ -102,7 +115,7 @@ export const Staff = () => {
         ].map((t) => (
           <button
             key={t.id}
-            onClick={() => setActiveTab(t.id)}
+            onClick={() => navigate(t.id === 'directory' ? '/staff' : `/staff/${t.id}`)}
             className={`pb-3 text-sm font-bold border-b-2 transition-all px-1 flex items-center gap-2 ${
               activeTab === t.id
                 ? 'border-blue-600 text-blue-600 dark:text-blue-400'

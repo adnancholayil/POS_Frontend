@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useLocation, useNavigate } from 'react-router-dom';
 import {
   FiShoppingCart, FiSearch, FiTrash2, FiUser,
   FiFileText, FiRepeat, FiCheck, FiPrinter, FiPlus, FiMinus, FiCpu
@@ -18,7 +19,19 @@ import { PAYMENT_METHODS } from '../utils/constants';
 export const Sales = () => {
   const queryClient = useQueryClient();
   const { addToast } = useToast();
+  const location = useLocation();
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('pos'); // 'pos' | 'history' | 'returns'
+
+  React.useEffect(() => {
+    if (location.pathname.endsWith('/pos')) {
+      setActiveTab('pos');
+    } else if (location.pathname.endsWith('/returns')) {
+      setActiveTab('returns');
+    } else {
+      setActiveTab('history');
+    }
+  }, [location.pathname]);
   const [posSearch, setPosSearch] = useState('');
   const [posCategory, setPosCategory] = useState('');
 
@@ -198,10 +211,9 @@ export const Sales = () => {
 
   return (
     <div className="space-y-6">
-      {/* Tab select */}
       <div className="flex border-b border-slate-200 dark:border-slate-800 gap-4">
         <button
-          onClick={() => setActiveTab('pos')}
+          onClick={() => navigate('/sales/pos')}
           className={`pb-3 text-sm font-bold border-b-2 transition-all px-1 flex items-center gap-2 ${
             activeTab === 'pos'
               ? 'border-blue-600 text-blue-600 dark:text-blue-400'
@@ -211,7 +223,7 @@ export const Sales = () => {
           <FiShoppingCart /> POS billing Terminal
         </button>
         <button
-          onClick={() => setActiveTab('history')}
+          onClick={() => navigate('/sales')}
           className={`pb-3 text-sm font-bold border-b-2 transition-all px-1 flex items-center gap-2 ${
             activeTab === 'history'
               ? 'border-blue-600 text-blue-600 dark:text-blue-400'
