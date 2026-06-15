@@ -3,7 +3,6 @@ import { useSelector, useDispatch } from 'react-redux';
 import { Outlet } from 'react-router-dom';
 import { Sidebar } from '../components/layout/Sidebar';
 import { Navbar } from '../components/layout/Navbar';
-import { ToastContainer } from '../components/ui/Toast';
 import { selectSidebarOpen, selectSidebarCollapsed, setSidebarOpen, toggleSidebar } from '../features/ui/uiSlice';
 import { cn } from '../utils/helpers';
 import { useSocket } from '../hooks/useSocket';
@@ -32,7 +31,6 @@ export const DashboardLayout = () => {
           <Outlet />
         </main>
       </div>
-      <ToastContainer />
     </div>
   );
 };
