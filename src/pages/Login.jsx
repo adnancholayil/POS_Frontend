@@ -62,6 +62,8 @@ export const Login = () => {
     }
   };
 
+  const DEMO_SHOP_CODE = 'DEMO01';
+
   const fillQuickLogin = (email, password, shopCode) => {
     setValue('email', email);
     setValue('password', password);
@@ -182,14 +184,14 @@ export const Login = () => {
         <div className="grid grid-cols-2 gap-2 mt-2">
           <button
             type="button"
-            onClick={() => fillQuickLogin('admin@zylox.com', 'admin123')}
+            onClick={() => fillQuickLogin('admin@zylox.com', 'admin123', DEMO_SHOP_CODE)}
             className="flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-bold text-slate-700 dark:text-slate-300 bg-slate-100 dark:bg-slate-800/60 hover:bg-slate-200 dark:hover:bg-slate-800 rounded-lg transition-colors border border-slate-200/50 dark:border-slate-800/40"
           >
             <FiShield className="text-xs text-blue-500" /> Admin
           </button>
           <button
             type="button"
-            onClick={() => fillQuickLogin('salesman@zylox.com', 'sales123')}
+            onClick={() => fillQuickLogin('salesman@zylox.com', 'sales123', DEMO_SHOP_CODE)}
             className="flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-bold text-slate-700 dark:text-slate-300 bg-slate-100 dark:bg-slate-800/60 hover:bg-slate-200 dark:hover:bg-slate-800 rounded-lg transition-colors border border-slate-200/50 dark:border-slate-800/40"
           >
             <FiUser className="text-xs text-indigo-500" /> Salesman
