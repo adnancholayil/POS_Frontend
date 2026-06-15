@@ -19,10 +19,12 @@ export const Login = () => {
   const { register, handleSubmit, setValue, formState: { errors } } = useForm();
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  const savedCode = localStorage.getItem('shopCode');
+  const [savedShopCode, setSavedShopCode] = React.useState(savedCode || '');
   React.useEffect(() => {
-    const savedCode = localStorage.getItem('shopCode');
     if (savedCode) {
       setValue('tenantId', savedCode);
+      setSavedShopCode(savedCode);
     }
   }, [setValue]);
 
@@ -105,6 +107,11 @@ export const Login = () => {
             icon={<FiHash />}
             {...register('tenantId', { required: 'Shop Code is required' })}
           />
+          {savedShopCode && (
+            <p className="mt-1 text-xs text-gray-600 dark:text-gray-400">
+              📌 Your saved Shop Code: <span className="font-medium">{savedShopCode}</span>
+            </p>
+          )}
 
           {/* Email */}
           <Input

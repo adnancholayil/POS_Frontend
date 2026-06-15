@@ -36,7 +36,9 @@ export const Register = () => {
       const shopCode = response.data?.shopCode;
 
       if (shopCode) {
-        addToast(`✅ Account created! Your Shop Code is: ${shopCode} — save this, you'll need it to log in.`, 'success', 10000);
+        // Save it locally so the login page can pre‑fill the Shop Code field
+        localStorage.setItem('shopCode', shopCode);
+        addToast(`✅ Account created! Your Shop Code is: ${shopCode} — saved for login.`, 'success', 10000);
       } else {
         addToast('Registration successful! You can now log in.', 'success');
       }
