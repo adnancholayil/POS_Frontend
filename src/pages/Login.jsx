@@ -125,11 +125,6 @@ export const Login = () => {
               Need a Shop Code? <Link to="/register" className="font-medium text-blue-600 dark:text-blue-400 underline">Register a new shop</Link>.
             </p>
           )}
-          {savedShopCode && (
-            <p className="mt-1 text-xs text-gray-600 dark:text-gray-400">
-              📌 Your saved Shop Code: <span className="font-medium">{savedShopCode}</span>
-            </p>
-          )}
 
           {/* Email */}
           <Input
