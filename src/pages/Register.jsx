@@ -76,7 +76,10 @@ export const Register = () => {
           </p>
         </div>
 
-        <form onSubmit={handleSubmit(handleRegister)} className="space-y-4">
+        <form onSubmit={handleSubmit(handleRegister, (errors) => {
+          const firstError = Object.values(errors)[0];
+          if (firstError?.message) addToast(firstError.message, 'error');
+        })} className="space-y-4">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Input
               label="Shop / Business Name"

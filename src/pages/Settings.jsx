@@ -100,7 +100,10 @@ export const Settings = () => {
               <div className="h-10 bg-slate-200 dark:bg-slate-800 rounded-lg" />
             </div>
           ) : (
-            <form onSubmit={handleSubmitShop(handleSaveShop)} className="space-y-4">
+            <form onSubmit={handleSubmitShop(handleSaveShop, (errors) => {
+              const firstError = Object.values(errors)[0];
+              if (firstError?.message) addToast(firstError.message, 'error');
+            })} className="space-y-4">
               <h2 className="text-sm font-bold text-slate-800 dark:text-slate-100 uppercase tracking-wider border-b pb-3 mb-4">Invoice header details</h2>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -168,7 +171,10 @@ export const Settings = () => {
       {/* ACCOUNT SECURITY */}
       {activeTab === 'security' && (
         <div className="max-w-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm mx-auto">
-          <form onSubmit={handleSubmitSecurity(handleSaveSecurity)} className="space-y-4">
+          <form onSubmit={handleSubmitSecurity(handleSaveSecurity, (errors) => {
+            const firstError = Object.values(errors)[0];
+            if (firstError?.message) addToast(firstError.message, 'error');
+          })} className="space-y-4">
             <h2 className="text-sm font-bold text-slate-800 dark:text-slate-100 uppercase tracking-wider border-b pb-3 mb-4">Update login Password</h2>
 
             <Input

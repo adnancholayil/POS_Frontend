@@ -69,7 +69,10 @@ export const ResetPassword = () => {
           </p>
         </div>
 
-        <form onSubmit={handleSubmit(handleResetPassword)} className="space-y-4">
+        <form onSubmit={handleSubmit(handleResetPassword, (errors) => {
+          const firstError = Object.values(errors)[0];
+          if (firstError?.message) addToast(firstError.message, 'error');
+        })} className="space-y-4">
           <Input
             label="Shop ID / Tenant ID"
             type="text"

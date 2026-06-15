@@ -88,7 +88,10 @@ export const VerifyOtp = () => {
           </p>
         </div>
 
-        <form onSubmit={handleSubmit(handleVerifyOtp)} className="space-y-4">
+        <form onSubmit={handleSubmit(handleVerifyOtp, (errors) => {
+          const firstError = Object.values(errors)[0];
+          if (firstError?.message) addToast(firstError.message, 'error');
+        })} className="space-y-4">
           {!email && (
             <Input
               label="Confirm Email Address"
