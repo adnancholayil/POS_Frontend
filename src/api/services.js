@@ -26,6 +26,7 @@ const mapProductFromBackend = (p) => {
     cost: p.cost || defaultVariant.costPrice || 0,
     stock: p.stock || 0,
     minStock: p.minStock || 0,
+    taxRate: p.taxRate !== undefined ? p.taxRate : 18,
     imeiRequired: p.hasIMEI || false,
     imeiList: p.imeiList || [],
     image: p.images?.[0]?.url || ''
@@ -348,6 +349,10 @@ export const salesApi = {
         productName: it.name,
         quantity: it.qty,
         unitPrice: it.price,
+        taxRate: it.taxRate !== undefined ? it.taxRate : 18,
+        discountAmount: it.discountAmount || 0,
+        taxAmount: it.taxAmount || 0,
+        totalPrice: it.totalPrice || 0,
         imei: it.imei || null
       }))
     };
@@ -1031,17 +1036,35 @@ export const settingsApi = {
     const d = res.data?.data || {};
     return {
       data: {
-        shopName: d.shopName || 'Galaxy Shop',
-        shopAddress: d.shopAddress || '',
-        shopEmail: d.shopEmail || '',
-        defaultTaxRate: d.defaultTaxRate || 18,
+        name: d.shopName || 'Galaxy Shop',
+        address: d.shopAddress || '',
+        phone: d.shopPhone || '',
+        email: d.shopEmail || '',
+        gstin: d.gstNumber || '',
+        defaultTaxRate: d.defaultTaxRate !== undefined ? d.defaultTaxRate : 18,
+        printType: d.printType || 'thermal',
+        terms: d.terms || '',
         invoicePrefix: d.invoicePrefix || 'INV',
-        repairPrefix: d.repairPrefix || 'REP'
+        repairPrefix: d.repairTicketPrefix || 'REP'
       }
     };
   }),
 
-  updateShop: (data) => api.put('/settings', data),
+  updateShop: (data) => {
+    const backendData = {
+      shopName: data.name,
+      shopAddress: data.address,
+      shopPhone: data.phone,
+      shopEmail: data.email,
+      gstNumber: data.gstin,
+      defaultTaxRate: data.defaultTaxRate !== undefined ? Number(data.defaultTaxRate) : 18,
+      printType: data.printType || 'thermal',
+      terms: data.terms,
+      invoicePrefix: data.invoicePrefix,
+      repairTicketPrefix: data.repairPrefix
+    };
+    return api.put('/settings', backendData);
+  },
   uploadLogo: (formData) => Promise.resolve({ success: true }),
   getSecurity: () => Promise.resolve({ data: { twoFactorEnabled: false } }),
   updateSecurity: (data) => Promise.resolve({ success: true }),

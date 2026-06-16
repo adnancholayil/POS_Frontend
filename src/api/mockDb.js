@@ -897,6 +897,7 @@ export const handleMockRequest = async (config) => {
       phone: '9988776655',
       email: 'support@zylox.com',
       gstin: '09AAAFZ1234F1Z1',
+      printType: 'thermal',
       terms: '1. Goods once sold cannot be taken back or exchanged without valid warranty claim.\n2. Warranty covers manufacturing defects only.\n3. Repair parts warranty is 90 days.'
     });
     return ok(shop);

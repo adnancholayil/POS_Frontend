@@ -358,10 +358,62 @@ body {
 /* ============================================================
    PRINT STYLES
    ============================================================ */
+@media screen {
+  .print-only-section {
+    display: none !important;
+  }
+}
+
 @media print {
-  .no-print { display: none !important; }
-  body { background: white !important; color: black !important; }
-  .card { box-shadow: none !important; border: 1px solid #e2e8f0 !important; }
+  /* Hide all elements on the screen layout */
+  body * {
+    visibility: hidden !important;
+  }
+
+  /* Show only the print section */
+  .print-only-section,
+  .print-only-section * {
+    visibility: visible !important;
+  }
+
+  .print-only-section {
+    display: block !important;
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: white !important;
+    color: black !important;
+  }
+
+  /* Thermal printer size constraints (80mm width) */
+  .print-only-section.format-thermal {
+    width: 80mm !important;
+    max-width: 80mm !important;
+    padding: 2mm !important;
+    box-sizing: border-box !important;
+  }
+
+  /* A4 printer size constraints */
+  .print-only-section.format-a4 {
+    width: 210mm !important;
+    max-width: 210mm !important;
+    min-height: 297mm !important;
+    padding: 15mm !important;
+    box-sizing: border-box !important;
+    background: white !important;
+  }
+
+  /* Clean up page dimensions in standard print output */
+  html, body {
+    width: 100% !important;
+    height: auto !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: white !important;
+  }
 }
 
 /* ============================================================
@@ -401,3 +453,18 @@ body {
   box-shadow: var(--shadow-card);
 }
 .pos-item-card:active { transform: scale(0.97); }
+
+/* ============================================================
+   SPIN BUTTON ARROW REMOVAL
+   ============================================================ */
+/* Chrome, Safari, Edge, Opera */
+input::-webkit-outer-spin-button,
+input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+/* Firefox */
+input[type="number"] {
+  -moz-appearance: textfield;
+}

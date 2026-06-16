@@ -107,6 +107,7 @@ export const Products = () => {
       cost: Number(data.cost),
       stock: Number(data.stock),
       minStock: Number(data.minStock),
+      taxRate: Number(data.taxRate !== undefined ? data.taxRate : 18),
       imeiList: data.imeiRequired ? data.imeis?.split(',').map(i => i.trim()).filter(Boolean) : [],
     });
   };
@@ -120,6 +121,7 @@ export const Products = () => {
         cost: Number(data.cost),
         stock: Number(data.stock),
         minStock: Number(data.minStock),
+        taxRate: Number(data.taxRate !== undefined ? data.taxRate : 18),
         imeiList: data.imeiRequired ? data.imeis?.split(',').map(i => i.trim()).filter(Boolean) : [],
       }
     });
@@ -135,6 +137,7 @@ export const Products = () => {
     setEditValue('price', product.price);
     setEditValue('stock', product.stock);
     setEditValue('minStock', product.minStock);
+    setEditValue('taxRate', product.taxRate !== undefined ? product.taxRate : 18);
     setEditValue('imeiRequired', product.imeiRequired);
     setEditValue('imeis', product.imeiList?.join(', ') || '');
     setIsEditOpen(true);
@@ -162,7 +165,16 @@ export const Products = () => {
     { label: 'Product Name', key: 'name', className: 'font-bold text-slate-800 dark:text-slate-200' },
     { label: 'Category', key: 'category' },
     { label: 'Cost Price', key: 'cost', render: (val) => formatCurrency(val) },
-    { label: 'Retail Price', key: 'price', render: (val) => formatCurrency(val) },
+    {
+      label: 'Retail Price',
+      key: 'price',
+      render: (val, row) => (
+        <div className="space-y-0.5">
+          <p className="font-semibold text-slate-800 dark:text-slate-200">{formatCurrency(val)}</p>
+          <p className="text-[10px] text-slate-400">GST: {row.taxRate !== undefined ? row.taxRate : 18}%</p>
+        </div>
+      )
+    },
     {
       label: 'Stock Status',
       key: 'stock',
@@ -314,7 +326,7 @@ export const Products = () => {
             />
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <Select
               label="Department Category"
               options={categories}
@@ -329,6 +341,19 @@ export const Products = () => {
               error={errorsAdd.cost?.message}
               required
               {...registerAdd('cost', { required: 'Cost price is required' })}
+            />
+            <Select
+              label="GST Rate (%)"
+              options={[
+                { value: 0, label: '0%' },
+                { value: 5, label: '5%' },
+                { value: 12, label: '12%' },
+                { value: 18, label: '18% (Default)' },
+                { value: 28, label: '28%' }
+              ]}
+              defaultValue={18}
+              error={errorsAdd.taxRate?.message}
+              {...registerAdd('taxRate')}
             />
           </div>
 
@@ -403,7 +428,7 @@ export const Products = () => {
             />
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <Select
               label="Department Category"
               options={categories}
@@ -417,6 +442,18 @@ export const Products = () => {
               error={errorsEdit.cost?.message}
               required
               {...registerEdit('cost', { required: 'Cost price is required' })}
+            />
+            <Select
+              label="GST Rate (%)"
+              options={[
+                { value: 0, label: '0%' },
+                { value: 5, label: '5%' },
+                { value: 12, label: '12%' },
+                { value: 18, label: '18% (Default)' },
+                { value: 28, label: '28%' }
+              ]}
+              error={errorsEdit.taxRate?.message}
+              {...registerEdit('taxRate')}
             />
           </div>
 

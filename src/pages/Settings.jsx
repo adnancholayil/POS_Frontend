@@ -6,7 +6,7 @@ import {
   FiMapPin, FiMail, FiPhone, FiInfo, FiSliders
 } from 'react-icons/fi';
 import { settingsApi } from '../api/services';
-import { Input, Textarea } from '../components/ui/Input';
+import { Input, Textarea, Select } from '../components/ui/Input';
 import { Button } from '../components/ui/Button';
 import { useToast } from '../hooks/useToast';
 
@@ -120,6 +120,25 @@ export const Settings = () => {
                   error={errorsShop.gstin?.message}
                   required
                   {...registerShop('gstin', { required: 'GSTIN is required' })}
+                />
+                <Input
+                  label="Default GST Rate (%)"
+                  type="number"
+                  placeholder="e.g. 18"
+                  error={errorsShop.defaultTaxRate?.message}
+                  required
+                  {...registerShop('defaultTaxRate', { required: 'Default GST rate is required' })}
+                />
+                <Select
+                  label="Receipt / Printing Mode"
+                  error={errorsShop.printType?.message}
+                  required
+                  options={[
+                    { value: 'thermal', label: 'Thermal Printing (80mm)' },
+                    { value: 'a4', label: 'A4 Printing' },
+                    { value: 'whatsapp', label: 'Online (WhatsApp Share)' }
+                  ]}
+                  {...registerShop('printType', { required: 'Printing mode is required' })}
                 />
               </div>
 
