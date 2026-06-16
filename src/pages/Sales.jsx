@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useLocation, useNavigate } from 'react-router-dom';
 import {
   FiShoppingCart, FiSearch, FiTrash2, FiUser,
-  FiFileText, FiRepeat, FiCheck, FiPrinter, FiPlus, FiMinus, FiCpu
+  FiFileText, FiRepeat, FiCheck, FiPrinter, FiPlus, FiMinus, FiCpu, FiBox
 } from 'react-icons/fi';
 import { salesApi, productApi, customerApi } from '../api/services';
 import { TableCard } from '../components/ui/DataTable';
@@ -47,6 +47,7 @@ export const Sales = () => {
   const [cart, setCart] = useState([]);
   const [customerName, setCustomerName] = useState('Walk-in Customer');
   const [customerPhone, setCustomerPhone] = useState('');
+  const [selectedCustomerId, setSelectedCustomerId] = useState('walk-in');
   const [discount, setDiscount] = useState(0);
   const [paymentMethod, setPaymentMethod] = useState('cash');
 
@@ -88,6 +89,7 @@ export const Sales = () => {
       setCart([]);
       setCustomerName('Walk-in Customer');
       setCustomerPhone('');
+      setSelectedCustomerId('walk-in');
       setDiscount(0);
     },
     onError: () => addToast('Checkout processing failed', 'error'),
@@ -169,6 +171,15 @@ export const Sales = () => {
       }
       return item;
     }).filter(Boolean));
+  };
+
+  const updateCartQtyVal = (productId, newQty) => {
+    setCart(cart.map(item => {
+      if (item.productId === productId) {
+        return { ...item, qty: newQty };
+      }
+      return item;
+    }));
   };
 
   const updateCartImei = (productId, imei) => {
@@ -311,33 +322,62 @@ export const Sales = () => {
             </div>
 
             {isLoadingProducts ? (
-              <div className="grid grid-cols-2 gap-3">
-                {[1, 2, 4].map(i => <div key={i} className="h-28 bg-slate-200 dark:bg-slate-800 rounded-xl animate-pulse" />)}
+              <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-3">
+                {[1, 2, 3, 4].map(i => <div key={i} className="h-36 bg-slate-200 dark:bg-slate-800 rounded-xl animate-pulse" />)}
               </div>
             ) : filteredProducts.length === 0 ? (
               <div className="p-8 text-center text-slate-400">No items match criteria</div>
             ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-[60vh] overflow-y-auto pr-1">
-                {filteredProducts.map(p => (
-                  <div
-                    key={p.id}
-                    onClick={() => addToCart(p)}
-                    className="p-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl flex items-center justify-between cursor-pointer hover:border-blue-500 dark:hover:border-blue-500 hover:shadow-sm transition-all"
-                  >
-                    <div className="min-w-0 flex-1">
-                      <p className="text-xs font-bold text-slate-400 font-mono tracking-tight">{p.sku}</p>
-                      <p className="text-sm font-extrabold text-slate-800 dark:text-slate-100 truncate mt-0.5">{p.name}</p>
-                      <p className="text-xs text-slate-500 mt-1">{formatCurrency(p.price)}</p>
+              <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-3 max-h-[60vh] overflow-y-auto pr-1 pb-4">
+                {filteredProducts.map(p => {
+                  const backendBaseUrl = (import.meta.env.VITE_API_URL || 'http://localhost:5000/api/v1').replace('/api/v1', '');
+                  const imageUrl = p.image ? `${backendBaseUrl}${p.image}` : null;
+                  return (
+                    <div
+                      key={p.id}
+                      onClick={() => addToCart(p)}
+                      className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden cursor-pointer hover:border-blue-500 dark:hover:border-blue-500 hover:shadow-md transition-all flex flex-col group"
+                    >
+                      {/* Product Image Container */}
+                      <div className="relative aspect-square w-full bg-slate-50 dark:bg-slate-800/50 flex items-center justify-center border-b border-slate-100 dark:border-slate-800 overflow-hidden">
+                        {imageUrl ? (
+                          <img
+                            src={imageUrl}
+                            alt={p.name}
+                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
+                            onError={(e) => {
+                              e.target.onerror = null;
+                              e.target.src = '';
+                              e.target.style.display = 'none';
+                            }}
+                          />
+                        ) : (
+                          <FiBox className="text-2xl text-slate-300 dark:text-slate-700 stroke-[1.5]" />
+                        )}
+                      </div>
+                      
+                      {/* Product Info */}
+                      <div className="p-3 flex-1 flex flex-col justify-between min-w-0">
+                        <div>
+                          <p className="text-[10px] font-bold text-slate-400 font-mono tracking-tight truncate">{p.sku}</p>
+                          <p className="text-xs font-black text-slate-800 dark:text-slate-200 line-clamp-2 mt-0.5 leading-snug group-hover:text-blue-500 dark:group-hover:text-blue-400 transition-colors" title={p.name}>
+                            {p.name}
+                          </p>
+                        </div>
+                        <div className="flex items-center justify-between mt-2 pt-1.5 border-t border-slate-100 dark:border-slate-800/60">
+                          <p className="text-xs font-extrabold text-blue-600 dark:text-blue-400">{formatCurrency(p.price)}</p>
+                          <div>
+                            {p.stock <= 0 ? (
+                              <Badge variant="danger" className="text-[9px] px-1 py-0 scale-90">Out</Badge>
+                            ) : (
+                              <Badge variant="success" className="text-[9px] px-1 py-0 scale-90">{p.stock} u</Badge>
+                            )}
+                          </div>
+                        </div>
+                      </div>
                     </div>
-                    <div className="text-right ml-4">
-                      {p.stock <= 0 ? (
-                        <Badge variant="danger" className="text-[9px]">Out</Badge>
-                      ) : (
-                        <Badge variant="success" className="text-[9px]">{p.stock} units</Badge>
-                      )}
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </div>
@@ -349,7 +389,7 @@ export const Sales = () => {
             </h3>
 
             {/* Cart items list */}
-            <div className="flex-1 overflow-y-auto space-y-3 pr-1">
+            <div className="flex-1 overflow-y-auto space-y-1.5 pr-1">
               <AnimatePresence>
                 {cart.length === 0 ? (
                   <div className="h-full flex flex-col items-center justify-center text-slate-400">
@@ -366,52 +406,83 @@ export const Sales = () => {
                         initial={{ opacity: 0, x: 10 }}
                         animate={{ opacity: 1, x: 0 }}
                         exit={{ opacity: 0, x: -10 }}
-                        className="p-3 bg-slate-50 dark:bg-slate-800/40 rounded-xl space-y-2 relative border border-slate-200/50 dark:border-slate-800/20"
+                        className="flex flex-col gap-1 py-2 border-b border-slate-100 dark:border-slate-800/60 last:border-0"
                       >
-                        <div className="flex items-start justify-between gap-2">
-                          <div className="min-w-0 flex-1">
-                            <p className="text-xs font-bold text-slate-800 dark:text-slate-200 leading-snug">{item.name}</p>
-                            <p className="text-[10px] text-slate-400 font-mono mt-0.5">{formatCurrency(item.price)} each</p>
+                        <div className="flex items-center justify-between gap-3 text-slate-800 dark:text-slate-200">
+                          {/* Left: Delete & Name */}
+                          <div className="min-w-0 flex-1 flex items-center gap-1.5">
+                            <button
+                              onClick={() => removeFromCart(item.productId)}
+                              className="text-red-400 hover:text-red-600 transition-colors shrink-0 p-0.5 rounded hover:bg-red-50 dark:hover:bg-red-950/20"
+                              title="Remove"
+                            >
+                              <FiTrash2 className="text-xs" />
+                            </button>
+                            <span className="text-xs font-bold truncate leading-tight dark:text-slate-100" title={item.name}>
+                              {item.name}
+                            </span>
                           </div>
-                          <button
-                            onClick={() => removeFromCart(item.productId)}
-                            className="p-1 rounded text-red-500 hover:bg-red-50 dark:hover:bg-red-950/20 transition-colors"
-                          >
-                            <FiTrash2 className="text-xs" />
-                          </button>
+
+                          {/* Center: Qty adjusting (Typable) */}
+                          <div className="flex items-center border border-slate-200 dark:border-slate-700 rounded-lg overflow-hidden shrink-0 h-6">
+                            <button
+                              onClick={() => updateCartQty(item.productId, -1, stock)}
+                              className="px-1.5 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors text-slate-500 h-full flex items-center justify-center"
+                            >
+                              <FiMinus className="text-[9px]" />
+                            </button>
+                            <input
+                              type="number"
+                              value={item.qty}
+                              onChange={(e) => {
+                                const val = parseInt(e.target.value);
+                                if (!isNaN(val)) {
+                                  if (val > stock) {
+                                    addToast('Cannot exceed physical stock limits', 'warning');
+                                    updateCartQtyVal(item.productId, stock);
+                                  } else if (val >= 1) {
+                                    updateCartQtyVal(item.productId, val);
+                                  }
+                                } else {
+                                  updateCartQtyVal(item.productId, '');
+                                }
+                              }}
+                              onBlur={(e) => {
+                                let val = parseInt(e.target.value) || 1;
+                                if (val > stock) val = stock;
+                                if (val < 1) val = 1;
+                                updateCartQtyVal(item.productId, val);
+                              }}
+                              className="w-8 text-center text-xs font-bold bg-transparent border-0 outline-none p-0 focus:outline-none focus:ring-0 focus:border-0"
+                            />
+                            <button
+                              onClick={() => updateCartQty(item.productId, 1, stock)}
+                              className="px-1.5 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors text-slate-500 h-full flex items-center justify-center"
+                            >
+                              <FiPlus className="text-[9px]" />
+                            </button>
+                          </div>
+
+                          {/* Right: Total Price */}
+                          <div className="text-right shrink-0 min-w-[70px]">
+                            <span className="text-xs font-black dark:text-slate-200">{formatCurrency(item.price * item.qty)}</span>
+                            <p className="text-[9px] text-slate-400 font-mono -mt-0.5">{formatCurrency(item.price)} each</p>
+                          </div>
                         </div>
 
+                        {/* Optional IMEI Dropdown (fits nested underneath) */}
                         {item.imeiRequired && (
-                          <div className="flex items-center gap-2">
-                            <span className="text-[10px] font-bold text-blue-600 dark:text-blue-400 bg-blue-500/10 px-1 rounded flex items-center gap-0.5"><FiCpu /> IMEI:</span>
+                          <div className="flex items-center gap-2 pl-6 pr-2">
+                            <span className="text-[9px] font-bold text-blue-600 dark:text-blue-400 bg-blue-500/10 px-1 rounded flex items-center gap-0.5"><FiCpu /> IMEI:</span>
                             <Select
                               value={item.imei}
                               onChange={(e) => updateCartImei(item.productId, e.target.value)}
                               options={item.imeiList}
                               placeholder="-- Select IMEI --"
-                              className="py-0.5 text-xs flex-1"
+                              className="py-0 px-1 text-[10px] h-6 min-h-0 flex-1 bg-transparent border-slate-200 dark:border-slate-800"
                             />
                           </div>
                         )}
-
-                        <div className="flex items-center justify-between border-t border-slate-200/40 dark:border-slate-800/20 pt-2">
-                          <div className="flex items-center border border-slate-200 dark:border-slate-700 rounded-lg overflow-hidden shrink-0">
-                            <button
-                              onClick={() => updateCartQty(item.productId, -1, stock)}
-                              className="p-1 px-2 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
-                            >
-                              <FiMinus className="text-[10px]" />
-                            </button>
-                            <span className="px-3 text-xs font-bold">{item.qty}</span>
-                            <button
-                              onClick={() => updateCartQty(item.productId, 1, stock)}
-                              className="p-1 px-2 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
-                            >
-                              <FiPlus className="text-[10px]" />
-                            </button>
-                          </div>
-                          <span className="text-xs font-bold text-slate-700 dark:text-slate-300">{formatCurrency(item.price * item.qty)}</span>
-                        </div>
                       </motion.div>
                     );
                   })
@@ -421,18 +492,29 @@ export const Sales = () => {
 
             {/* Cart summary */}
             <div className="border-t border-slate-100 dark:border-slate-800 pt-4 mt-4 space-y-3">
-              <div className="grid grid-cols-2 gap-2">
-                <Input
-                  label="Customer Phone"
-                  placeholder="e.g. 9876543210"
+              <div className="grid grid-cols-3 gap-2">
+                <Select
+                  label="Select Customer"
                   size="sm"
-                  value={customerPhone}
+                  value={selectedCustomerId}
                   onChange={(e) => {
-                    const phone = e.target.value;
-                    setCustomerPhone(phone);
-                    const found = customers.find(c => c.phone === phone);
-                    if (found) setCustomerName(found.name);
+                    const val = e.target.value;
+                    setSelectedCustomerId(val);
+                    if (val === 'walk-in') {
+                      setCustomerName('Walk-in Customer');
+                      setCustomerPhone('');
+                    } else {
+                      const found = customers.find(c => c.id === val);
+                      if (found) {
+                        setCustomerName(found.name);
+                        setCustomerPhone(found.phone);
+                      }
+                    }
                   }}
+                  options={[
+                    { value: 'walk-in', label: 'Walk-in Customer' },
+                    ...customers.map(c => ({ value: c.id, label: `${c.name} (${c.phone})` }))
+                  ]}
                 />
                 <Input
                   label="Customer Name"
@@ -440,6 +522,15 @@ export const Sales = () => {
                   size="sm"
                   value={customerName}
                   onChange={(e) => setCustomerName(e.target.value)}
+                  disabled={selectedCustomerId !== 'walk-in'}
+                />
+                <Input
+                  label="Customer Phone"
+                  placeholder="e.g. 9876543210"
+                  size="sm"
+                  value={customerPhone}
+                  onChange={(e) => setCustomerPhone(e.target.value)}
+                  disabled={selectedCustomerId !== 'walk-in'}
                 />
               </div>
 

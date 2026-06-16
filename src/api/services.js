@@ -27,7 +27,8 @@ const mapProductFromBackend = (p) => {
     stock: p.stock || 0,
     minStock: p.minStock || 0,
     imeiRequired: p.hasIMEI || false,
-    imeiList: p.imeiList || []
+    imeiList: p.imeiList || [],
+    image: p.images?.[0]?.url || ''
   };
 };
 
