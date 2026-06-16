@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useLocation, useNavigate } from 'react-router-dom';
+import html2canvas from 'html2canvas';
 import {
   FiShoppingCart, FiSearch, FiTrash2, FiUser,
   FiFileText, FiRepeat, FiCheck, FiPrinter, FiPlus, FiMinus, FiCpu, FiBox,
@@ -106,6 +107,8 @@ export const Sales = () => {
   const [checkoutResult, setCheckoutResult] = useState(null);
   const [viewInvoice, setViewInvoice] = useState(null);
   const [activePrintInvoice, setActivePrintInvoice] = useState(null);
+  const [activeWhatsappInvoice, setActiveWhatsappInvoice] = useState(null);
+  const whatsappCaptureRef = useRef(null);
 
   // Queries
   const { data: products = [], isLoading: isLoadingProducts } = useQuery({
@@ -149,6 +152,63 @@ export const Sales = () => {
     }
   }, [activePrintInvoice]);
 
+  // Generate PNG image of receipt, copy it to clipboard, download it, and open WhatsApp
+  useEffect(() => {
+    if (activeWhatsappInvoice && whatsappCaptureRef.current) {
+      const generateAndShare = async () => {
+        try {
+          const canvas = await html2canvas(whatsappCaptureRef.current, {
+            useCORS: true,
+            allowTaint: true,
+            scale: 2 // Crisper receipt image quality
+          });
+
+          canvas.toBlob(async (blob) => {
+            if (blob) {
+              // 1. Copy image to Clipboard
+              try {
+                const item = new ClipboardItem({ 'image/png': blob });
+                await navigator.clipboard.write([item]);
+                addToast('Receipt image copied to clipboard! Paste (Ctrl+V) in WhatsApp.', 'success');
+              } catch (clipErr) {
+                console.warn('Clipboard write blocked or not supported:', clipErr);
+                addToast('Receipt downloaded. Drag & drop or upload it to WhatsApp.', 'info');
+              }
+
+              // 2. Download Image File
+              const link = document.createElement('a');
+              link.download = `Receipt_${activeWhatsappInvoice.invoiceNo}.png`;
+              link.href = URL.createObjectURL(blob);
+              link.click();
+              URL.revokeObjectURL(link.href);
+            }
+          }, 'image/png');
+
+          // 3. Open WhatsApp Web Click-to-Chat
+          const phone = activeWhatsappInvoice.customerPhone ? activeWhatsappInvoice.customerPhone.replace(/\D/g, '') : '';
+          const formattedPhone = phone.length === 10 ? `91${phone}` : phone;
+          const whatsappUrl = `https://api.whatsapp.com/send?phone=${formattedPhone}`;
+          window.open(whatsappUrl, '_blank');
+        } catch (err) {
+          console.error('Failed to capture receipt image:', err);
+          addToast('Error generating receipt image. Falling back to text format...', 'warning');
+
+          // Text-based fallback
+          const phone = activeWhatsappInvoice.customerPhone ? activeWhatsappInvoice.customerPhone.replace(/\D/g, '') : '';
+          const formattedPhone = phone.length === 10 ? `91${phone}` : phone;
+          const msgText = buildWhatsAppMessage(activeWhatsappInvoice, shopSettings?.name);
+          const whatsappUrl = `https://api.whatsapp.com/send?phone=${formattedPhone}&text=${msgText}`;
+          window.open(whatsappUrl, '_blank');
+        } finally {
+          setActiveWhatsappInvoice(null);
+        }
+      };
+
+      const timer = setTimeout(generateAndShare, 300);
+      return () => clearTimeout(timer);
+    }
+  }, [activeWhatsappInvoice, shopSettings]);
+
   // Checkout Mutation
   const checkoutMutation = useMutation({
     mutationFn: (data) => salesApi.create(data),
@@ -184,11 +244,7 @@ export const Sales = () => {
 
       const printType = shopSettings?.printType || 'thermal';
       if (printType === 'whatsapp') {
-        const phone = customerPhone ? customerPhone.replace(/\D/g, '') : '';
-        const formattedPhone = phone.length === 10 ? `91${phone}` : phone;
-        const msgText = buildWhatsAppMessage(mappedInvoice, shopSettings?.name);
-        const whatsappUrl = `https://api.whatsapp.com/send?phone=${formattedPhone}&text=${msgText}`;
-        window.open(whatsappUrl, '_blank');
+        setActiveWhatsappInvoice(mappedInvoice);
       } else {
         setActivePrintInvoice(mappedInvoice);
       }
@@ -867,13 +923,7 @@ export const Sales = () => {
               <Button
                 variant="secondary"
                 className="rounded-xl flex items-center gap-1.5"
-                onClick={() => {
-                  const phone = checkoutResult.customerPhone ? checkoutResult.customerPhone.replace(/\D/g, '') : '';
-                  const formattedPhone = phone.length === 10 ? `91${phone}` : phone;
-                  const msgText = buildWhatsAppMessage(checkoutResult, shopSettings?.name);
-                  const whatsappUrl = `https://api.whatsapp.com/send?phone=${formattedPhone}&text=${msgText}`;
-                  window.open(whatsappUrl, '_blank');
-                }}
+                onClick={() => setActiveWhatsappInvoice(checkoutResult)}
               >
                 <FiSend /> WhatsApp Share
               </Button>
@@ -900,13 +950,7 @@ export const Sales = () => {
               <Button
                 variant="secondary"
                 className="rounded-xl flex items-center gap-1.5"
-                onClick={() => {
-                  const phone = viewInvoice.customerPhone ? viewInvoice.customerPhone.replace(/\D/g, '') : '';
-                  const formattedPhone = phone.length === 10 ? `91${phone}` : phone;
-                  const msgText = buildWhatsAppMessage(viewInvoice, shopSettings?.name);
-                  const whatsappUrl = `https://api.whatsapp.com/send?phone=${formattedPhone}&text=${msgText}`;
-                  window.open(whatsappUrl, '_blank');
-                }}
+                onClick={() => setActiveWhatsappInvoice(viewInvoice)}
               >
                 <FiSend /> WhatsApp Share
               </Button>
@@ -930,6 +974,20 @@ export const Sales = () => {
             invoice={activePrintInvoice}
             printType={shopSettings?.printType || 'thermal'}
             shopSettings={shopSettings}
+          />
+        </div>
+      )}
+
+      {/* Hidden off-screen capture container for WhatsApp images */}
+      {activeWhatsappInvoice && (
+        <div 
+          ref={whatsappCaptureRef} 
+          style={{ position: 'absolute', left: '-9999px', top: '-9999px', width: '380px', background: 'white' }}
+        >
+          <InvoicePrintable 
+            invoice={activeWhatsappInvoice} 
+            printType="thermal" 
+            shopSettings={shopSettings} 
           />
         </div>
       )}
@@ -983,7 +1041,7 @@ const InvoicePrintable = ({ invoice, printType = 'thermal', shopSettings }) => {
             <span className="w-1/3 text-right">Price</span>
           </div>
           <div className="border-b border-dashed border-slate-200 my-1" />
-          {invoice.items.map((item, idx) => (
+          {(invoice.items || []).map((item, idx) => (
             <div key={idx} className="space-y-0.5">
               <div className="flex justify-between">
                 <span className="w-1/2 font-semibold truncate">{item.name}</span>
@@ -1085,7 +1143,7 @@ const InvoicePrintable = ({ invoice, printType = 'thermal', shopSettings }) => {
           </tr>
         </thead>
         <tbody className="divide-y divide-slate-100">
-          {invoice.items.map((item, idx) => (
+          {(invoice.items || []).map((item, idx) => (
             <tr key={idx} className="text-xs text-slate-800">
               <td className="py-3 text-center text-slate-400 font-mono">{idx + 1}</td>
               <td className="py-3 pl-2">

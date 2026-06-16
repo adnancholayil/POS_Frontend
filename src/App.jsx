@@ -24,6 +24,7 @@ import Staff from './pages/Staff';
 import Tasks from './pages/Tasks';
 import Reports from './pages/Reports';
 import Settings from './pages/Settings';
+import Purchases from './pages/Purchases';
 
 import { ToastContainer } from './components/ui/Toast';
 
@@ -70,6 +71,12 @@ function App() {
             <Route path="inventory/stock-out" element={<Inventory />} />
             <Route path="inventory/low-stock" element={<Inventory />} />
             <Route path="inventory/history" element={<Inventory />} />
+
+            {/* Purchases */}
+            <Route path="purchases" element={<Purchases />} />
+            <Route path="purchases/new" element={<Purchases />} />
+            <Route path="purchases/history" element={<Purchases />} />
+            <Route path="purchases/suppliers" element={<Purchases />} />
 
             {/* Sales / POS */}
             <Route path="sales" element={<Sales />} />

@@ -200,6 +200,10 @@ export const productApi = {
     };
   }),
 
+  createCategory: (data) => api.post('/products/categories', data).then(res => ({
+    data: res.data?.data || res.data
+  })),
+
   updateStock: (id, data) => api.post('/inventory/adjust', {
     productId: id,
     quantity: data.stock,
@@ -720,7 +724,7 @@ export const staffApi = {
     return api.post('/users', {
       name: data.name,
       email: data.email,
-      password: 'TemporaryPassword123!', // Required by backend validation
+      password: data.password, // Passed from onboarding form
       role: roleId || roleName,
       phone: data.phone
     });
@@ -1043,9 +1047,12 @@ export const settingsApi = {
         gstin: d.gstNumber || '',
         defaultTaxRate: d.defaultTaxRate !== undefined ? d.defaultTaxRate : 18,
         printType: d.printType || 'thermal',
+        salesPrintType: d.salesPrintType || d.printType || 'thermal',
+        purchasePrintType: d.purchasePrintType || d.printType || 'thermal',
         terms: d.terms || '',
         invoicePrefix: d.invoicePrefix || 'INV',
-        repairPrefix: d.repairTicketPrefix || 'REP'
+        repairPrefix: d.repairTicketPrefix || 'REP',
+        shopCode: d.shopCode || ''
       }
     };
   }),
@@ -1058,7 +1065,9 @@ export const settingsApi = {
       shopEmail: data.email,
       gstNumber: data.gstin,
       defaultTaxRate: data.defaultTaxRate !== undefined ? Number(data.defaultTaxRate) : 18,
-      printType: data.printType || 'thermal',
+      printType: data.salesPrintType || data.printType || 'thermal',
+      salesPrintType: data.salesPrintType || data.printType || 'thermal',
+      purchasePrintType: data.purchasePrintType || data.printType || 'thermal',
       terms: data.terms,
       invoicePrefix: data.invoicePrefix,
       repairTicketPrefix: data.repairPrefix
@@ -1070,4 +1079,143 @@ export const settingsApi = {
   updateSecurity: (data) => Promise.resolve({ success: true }),
   getReceiptConfig: () => Promise.resolve({ data: { headerText: 'Galaxy POS Shop', footerText: 'Thank you for shopping!' } }),
   updateReceipt: (data) => Promise.resolve({ success: true }),
+};
+
+// ─── SUPPLIERS ────────────────────────────────────────────────────────────────
+const mapSupplier = (s) => ({
+  id: s._id,
+  name: s.name,
+  contactPerson: s.contactPerson || '',
+  phone: s.phone || '',
+  email: s.email || '',
+  address: s.address || '',
+  gstin: s.gstin || '',
+  notes: s.notes || '',
+  isActive: s.isActive !== false,
+  createdAt: s.createdAt,
+});
+
+export const supplierApi = {
+  getAll: (params) => api.get('/suppliers', { params }).then(res => ({
+    data: (res.data?.data?.suppliers || []).map(mapSupplier),
+    pagination: res.data?.data?.pagination || {},
+  })),
+
+  getById: (id) => api.get(`/suppliers/${id}`).then(res => ({
+    data: mapSupplier(res.data?.data || {}),
+  })),
+
+  create: (data) => api.post('/suppliers', {
+    name: data.name,
+    contactPerson: data.contactPerson || '',
+    phone: data.phone || '',
+    email: data.email || '',
+    address: data.address || '',
+    gstin: data.gstin || '',
+    notes: data.notes || '',
+  }).then(res => ({ data: mapSupplier(res.data?.data || {}) })),
+
+  update: (id, data) => api.put(`/suppliers/${id}`, {
+    name: data.name,
+    contactPerson: data.contactPerson || '',
+    phone: data.phone || '',
+    email: data.email || '',
+    address: data.address || '',
+    gstin: data.gstin || '',
+    notes: data.notes || '',
+  }).then(res => ({ data: mapSupplier(res.data?.data || {}) })),
+
+  delete: (id) => api.delete(`/suppliers/${id}`),
+
+  search: (q) => api.get('/suppliers', { params: { q, limit: 20 } }).then(res => ({
+    data: (res.data?.data?.suppliers || []).map(mapSupplier),
+  })),
+};
+
+// ─── PURCHASE ORDERS ──────────────────────────────────────────────────────────
+const mapPO = (po) => ({
+  id: po._id,
+  poNumber: po.poNumber,
+  date: po.createdAt,
+  supplierName: po.supplier?.name || '',
+  supplierPhone: po.supplier?.phone || '',
+  supplierId: po.supplier?._id || po.supplier || '',
+  paymentMethod: po.paymentMethod || 'cash',
+  notes: po.notes || '',
+  status: po.status || 'draft',
+  totalAmount: po.totalAmount || 0,
+  paidAmount: po.paidAmount || 0,
+  subtotal: po.totalAmount || 0,
+  tax: 0,
+  total: po.totalAmount || 0,
+  createdBy: po.createdBy?.name || '',
+  receivedAt: po.receivedAt || null,
+  expectedDeliveryDate: po.expectedDeliveryDate || null,
+  items: (po.items || []).map(item => ({
+    id: item._id,
+    productId: item.product?._id || item.product,
+    productName: item.productName,
+    name: item.productName,
+    sku: item.product?.sku || '',
+    barcode: item.product?.barcode || '',
+    qty: item.quantity,
+    quantity: item.quantity,
+    receivedQuantity: item.receivedQuantity || 0,
+    unitCost: item.unitCost,
+    totalCost: item.totalCost,
+    imeiList: item.imeiList || [],
+  })),
+});
+
+export const purchaseApi = {
+  getAll: (params) => api.get('/suppliers/purchase-orders', { params }).then(res => ({
+    data: (res.data?.data?.pos || []).map(mapPO),
+    pagination: res.data?.data?.pagination || {},
+  })),
+
+  getById: (id) => api.get(`/suppliers/purchase-orders/${id}`).then(res => ({
+    data: mapPO(res.data?.data || {}),
+  })),
+
+  /**
+   * Single-step purchase flow using the /create-and-receive endpoint.
+   * Backend creates PO, sets status to 'received', stocks in all items atomically.
+   */
+  create: (data) => api.post('/suppliers/purchase-orders/create-and-receive', {
+    supplierId: data.supplierId,
+    items: (data.items || []).map(item => ({
+      productId: item.productId,
+      productName: item.name || item.productName || 'Unknown',
+      quantity: item.qty || item.quantity || 1,
+      unitCost: Number(item.unitCost) || 0,
+      variantId: item.variantId || null,
+      imeiList: item.imeiList || [],
+    })),
+    notes: data.notes || '',
+    expectedDeliveryDate: data.expectedDeliveryDate || null,
+  }).then(res => ({ data: mapPO(res.data?.data || {}) })),
+
+  updateStatus: (id, status) => api.patch(`/suppliers/purchase-orders/${id}/status`, { status })
+    .then(res => ({ data: mapPO(res.data?.data || {}) })),
+
+  receiveItems: (id, itemsReceived) => api.post(`/suppliers/purchase-orders/${id}/receive`, { itemsReceived })
+    .then(res => ({ data: mapPO(res.data?.data || {}) })),
+
+  getStats: async () => {
+    const res = await api.get('/suppliers/purchase-orders', { params: { limit: 1000 } });
+    const list = (res.data?.data?.pos || []).map(mapPO);
+    const now = new Date();
+    const thisMonth = list.filter(p => {
+      const d = new Date(p.date);
+      return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+    });
+    return {
+      data: {
+        total: list.length,
+        thisMonth: thisMonth.length,
+        totalValue: list.reduce((s, p) => s + (p.total || 0), 0),
+        thisMonthValue: thisMonth.reduce((s, p) => s + (p.total || 0), 0),
+      },
+    };
+  },
 };

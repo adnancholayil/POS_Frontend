@@ -6,7 +6,7 @@ import {
   FiUsers, FiPlus, FiCalendar, FiTrendingUp,
   FiClock, FiAward, FiCheck, FiMail, FiPhone, FiSearch
 } from 'react-icons/fi';
-import { staffApi } from '../api/services';
+import { staffApi, settingsApi } from '../api/services';
 import { TableCard } from '../components/ui/DataTable';
 import { Modal } from '../components/ui/Modal';
 import { Input, Select, SearchInput } from '../components/ui/Input';
@@ -54,6 +54,11 @@ export const Staff = () => {
     queryKey: ['performance', selectedStaffId],
     queryFn: () => staffApi.getPerformance(selectedStaffId).then(res => res.data),
     enabled: !!selectedStaffId,
+  });
+
+  const { data: shopSettings } = useQuery({
+    queryKey: ['shopSettings'],
+    queryFn: () => settingsApi.getShop().then(res => res.data),
   });
 
   // Mutations
@@ -184,8 +189,30 @@ export const Staff = () => {
                   {...registerAdd('role', { required: 'Role is required' })}
                 />
               </div>
+              <Input
+                label="Login Password"
+                type="password"
+                placeholder="Minimum 8 characters"
+                error={errorsAdd.password?.message}
+                required
+                {...registerAdd('password', {
+                  required: 'Password is required',
+                  minLength: { value: 8, message: 'Password must be at least 8 characters' }
+                })}
+              />
               <Button type="submit" variant="primary" fullWidth className="rounded-xl" loading={createMutation.isPending}>Add Employee</Button>
             </form>
+            {shopSettings?.shopCode && (
+              <div className="mt-4 pt-4 border-t border-slate-100 dark:border-slate-800 text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed">
+                <p className="font-semibold text-slate-600 dark:text-slate-300 mb-1">🔑 Staff Login Details:</p>
+                <p>
+                  To access their account, the new staff member will need your Shop Code:
+                  <span className="block mt-1 font-mono text-xs font-bold text-blue-600 dark:text-blue-400 bg-blue-50/50 dark:bg-blue-950/30 px-2.5 py-1 rounded border border-blue-100 dark:border-blue-900/40 w-fit select-all">
+                    {shopSettings.shopCode}
+                  </span>
+                </p>
+              </div>
+            )}
           </div>
         </div>
       )}

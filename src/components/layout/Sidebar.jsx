@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   FiGrid, FiBox, FiPackage, FiShoppingCart, FiTool, FiUsers,
   FiUserCheck, FiCheckSquare, FiBarChart2, FiSettings, FiShield,
-  FiSmartphone, FiRepeat, FiChevronDown, FiChevronRight, FiX, FiLogOut,
+  FiSmartphone, FiRepeat, FiChevronDown, FiChevronRight, FiX, FiLogOut, FiTruck,
 } from 'react-icons/fi';
 import { useDispatch } from 'react-redux';
 import { logout } from '../../features/auth/authSlice';
@@ -36,6 +36,15 @@ const navItems = [
       { label: 'Stock Out',      path: '/inventory/stock-out' },
       { label: 'Low Stock',      path: '/inventory/low-stock' },
       { label: 'History',        path: '/inventory/history' },
+    ],
+  },
+  {
+    label: 'Purchases',    icon: <FiTruck />,
+    roles: ['admin','manager'],
+    children: [
+      { label: 'New Purchase',      path: '/purchases/new' },
+      { label: 'Purchase History',  path: '/purchases/history' },
+      { label: 'Suppliers',         path: '/purchases/suppliers' },
     ],
   },
   {

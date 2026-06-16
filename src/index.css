@@ -359,7 +359,8 @@ body {
    PRINT STYLES
    ============================================================ */
 @media screen {
-  .print-only-section {
+  .print-only-section,
+  .print-sticker-section {
     display: none !important;
   }
 }
@@ -370,9 +371,11 @@ body {
     visibility: hidden !important;
   }
 
-  /* Show only the print section */
+  /* Show only the print sections */
   .print-only-section,
-  .print-only-section * {
+  .print-only-section *,
+  .print-sticker-section,
+  .print-sticker-section * {
     visibility: visible !important;
   }
 
@@ -384,6 +387,18 @@ body {
     width: 100%;
     margin: 0 !important;
     padding: 0 !important;
+    background: white !important;
+    color: black !important;
+  }
+
+  .print-sticker-section {
+    display: block !important;
+    position: absolute;
+    left: 0;
+    top: 0;
+    margin: 0 !important;
+    padding: 0 !important;
+    box-sizing: border-box !important;
     background: white !important;
     color: black !important;
   }
