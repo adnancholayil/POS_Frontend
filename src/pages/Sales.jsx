@@ -4,7 +4,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useLocation, useNavigate } from 'react-router-dom';
 import {
   FiShoppingCart, FiSearch, FiTrash2, FiUser,
-  FiFileText, FiRepeat, FiCheck, FiPrinter, FiPlus, FiMinus, FiCpu, FiBox
+  FiFileText, FiRepeat, FiCheck, FiPrinter, FiPlus, FiMinus, FiCpu, FiBox,
+  FiCreditCard, FiSmartphone, FiDollarSign, FiSend
 } from 'react-icons/fi';
 import { salesApi, productApi, customerApi } from '../api/services';
 import { TableCard } from '../components/ui/DataTable';
@@ -42,6 +43,20 @@ export const Sales = () => {
       barcodeInputRef.current.focus();
     }
   }, [activeTab]);
+
+  React.useEffect(() => {
+    const handleGlobalKey = (e) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'b') {
+        e.preventDefault();
+        if (barcodeInputRef.current) {
+          barcodeInputRef.current.focus();
+          barcodeInputRef.current.select();
+        }
+      }
+    };
+    window.addEventListener('keydown', handleGlobalKey);
+    return () => window.removeEventListener('keydown', handleGlobalKey);
+  }, []);
 
   // POS State
   const [cart, setCart] = useState([]);
@@ -287,9 +302,9 @@ export const Sales = () => {
       </div>
 
       {activeTab === 'pos' ? (
-        <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
           {/* Left panel: Product Selector */}
-          <div className="lg:col-span-3 space-y-4">
+          <div className="lg:col-span-6 space-y-4">
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <div className="sm:col-span-1">
                 <Input
@@ -297,7 +312,7 @@ export const Sales = () => {
                   value={barcodeSearch}
                   onChange={(e) => setBarcodeSearch(e.target.value)}
                   onKeyDown={handleBarcodeScan}
-                  placeholder="Scan barcode directly..."
+                  placeholder="Scan barcode... (Ctrl+B)"
                   size="md"
                   className="font-mono pr-8"
                   icon={
@@ -328,7 +343,7 @@ export const Sales = () => {
             ) : filteredProducts.length === 0 ? (
               <div className="p-8 text-center text-slate-400">No items match criteria</div>
             ) : (
-              <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-3 max-h-[60vh] overflow-y-auto pr-1 pb-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-[65vh] overflow-y-auto pr-1 pb-4">
                 {filteredProducts.map(p => {
                   const backendBaseUrl = (import.meta.env.VITE_API_URL || 'http://localhost:5000/api/v1').replace('/api/v1', '');
                   const imageUrl = p.image ? `${backendBaseUrl}${p.image}` : null;
@@ -336,10 +351,10 @@ export const Sales = () => {
                     <div
                       key={p.id}
                       onClick={() => addToCart(p)}
-                      className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden cursor-pointer hover:border-blue-500 dark:hover:border-blue-500 hover:shadow-md transition-all flex flex-col group"
+                      className="p-3.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl flex items-center gap-3.5 cursor-pointer hover:border-blue-500 dark:hover:border-blue-500 hover:shadow-md transition-all group min-w-0"
                     >
-                      {/* Product Image Container */}
-                      <div className="relative aspect-square w-full bg-slate-50 dark:bg-slate-800/50 flex items-center justify-center border-b border-slate-100 dark:border-slate-800 overflow-hidden">
+                      {/* Image Thumbnail */}
+                      <div className="w-12 h-12 rounded-lg bg-slate-50 dark:bg-slate-800/50 flex items-center justify-center border border-slate-100 dark:border-slate-800 shrink-0 overflow-hidden">
                         {imageUrl ? (
                           <img
                             src={imageUrl}
@@ -352,27 +367,23 @@ export const Sales = () => {
                             }}
                           />
                         ) : (
-                          <FiBox className="text-2xl text-slate-300 dark:text-slate-700 stroke-[1.5]" />
+                          <FiBox className="text-lg text-slate-400 dark:text-slate-600 stroke-[1.5]" />
                         )}
                       </div>
                       
-                      {/* Product Info */}
-                      <div className="p-3 flex-1 flex flex-col justify-between min-w-0">
-                        <div>
-                          <p className="text-[10px] font-bold text-slate-400 font-mono tracking-tight truncate">{p.sku}</p>
-                          <p className="text-xs font-black text-slate-800 dark:text-slate-200 line-clamp-2 mt-0.5 leading-snug group-hover:text-blue-500 dark:group-hover:text-blue-400 transition-colors" title={p.name}>
-                            {p.name}
-                          </p>
-                        </div>
-                        <div className="flex items-center justify-between mt-2 pt-1.5 border-t border-slate-100 dark:border-slate-800/60">
-                          <p className="text-xs font-extrabold text-blue-600 dark:text-blue-400">{formatCurrency(p.price)}</p>
-                          <div>
-                            {p.stock <= 0 ? (
-                              <Badge variant="danger" className="text-[9px] px-1 py-0 scale-90">Out</Badge>
-                            ) : (
-                              <Badge variant="success" className="text-[9px] px-1 py-0 scale-90">{p.stock} u</Badge>
-                            )}
-                          </div>
+                      {/* Info Details */}
+                      <div className="min-w-0 flex-1 flex flex-col justify-between py-0.5">
+                        <p className="text-xs font-bold text-slate-400 font-mono tracking-tight truncate leading-none">{p.sku}</p>
+                        <p className="text-sm font-extrabold text-slate-800 dark:text-slate-100 truncate leading-tight group-hover:text-blue-500 dark:group-hover:text-blue-400 transition-colors mt-1 mb-1.5" title={p.name}>
+                          {p.name}
+                        </p>
+                        <div className="flex items-center justify-between leading-none">
+                          <span className="text-xs font-black text-blue-600 dark:text-blue-400">{formatCurrency(p.price)}</span>
+                          {p.stock <= 0 ? (
+                            <span className="text-[9px] text-red-500 font-bold bg-red-500/10 px-1.5 py-0.5 rounded">Out</span>
+                          ) : (
+                            <span className="text-[9px] text-green-500 font-bold bg-green-500/10 px-1.5 py-0.5 rounded">{p.stock} units</span>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -383,13 +394,13 @@ export const Sales = () => {
           </div>
 
           {/* Right panel: Shopping Cart */}
-          <div className="lg:col-span-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 flex flex-col h-[75vh] shadow-sm relative overflow-hidden">
+          <div className="lg:col-span-6 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 flex flex-col h-[80vh] shadow-sm relative overflow-hidden">
             <h3 className="text-sm font-bold text-slate-800 dark:text-slate-100 uppercase tracking-wider mb-4 border-b pb-3 flex items-center gap-2">
               <FiShoppingCart /> Billing Cart ({cart.length})
             </h3>
 
             {/* Cart items list */}
-            <div className="flex-1 overflow-y-auto space-y-1.5 pr-1">
+            <div className="flex-1 overflow-y-auto space-y-1.5 pr-1 font-sans">
               <AnimatePresence>
                 {cart.length === 0 ? (
                   <div className="h-full flex flex-col items-center justify-center text-slate-400">
@@ -406,30 +417,30 @@ export const Sales = () => {
                         initial={{ opacity: 0, x: 10 }}
                         animate={{ opacity: 1, x: 0 }}
                         exit={{ opacity: 0, x: -10 }}
-                        className="flex flex-col gap-1 py-2 border-b border-slate-100 dark:border-slate-800/60 last:border-0"
+                        className="flex flex-col gap-2.5 py-4 border-b border-slate-100 dark:border-slate-800/60 last:border-0"
                       >
                         <div className="flex items-center justify-between gap-3 text-slate-800 dark:text-slate-200">
                           {/* Left: Delete & Name */}
-                          <div className="min-w-0 flex-1 flex items-center gap-1.5">
+                          <div className="min-w-0 flex-1 flex items-center gap-2">
                             <button
                               onClick={() => removeFromCart(item.productId)}
-                              className="text-red-400 hover:text-red-600 transition-colors shrink-0 p-0.5 rounded hover:bg-red-50 dark:hover:bg-red-950/20"
+                              className="text-red-400 hover:text-red-600 transition-colors shrink-0 p-1.5 rounded hover:bg-red-50 dark:hover:bg-red-950/20"
                               title="Remove"
                             >
-                              <FiTrash2 className="text-xs" />
+                              <FiTrash2 className="text-sm" />
                             </button>
-                            <span className="text-xs font-bold truncate leading-tight dark:text-slate-100" title={item.name}>
+                            <span className="text-sm font-extrabold truncate leading-tight dark:text-slate-100" title={item.name}>
                               {item.name}
                             </span>
                           </div>
 
                           {/* Center: Qty adjusting (Typable) */}
-                          <div className="flex items-center border border-slate-200 dark:border-slate-700 rounded-lg overflow-hidden shrink-0 h-6">
+                          <div className="flex items-center border border-slate-200 dark:border-slate-700 rounded-lg overflow-hidden shrink-0 h-8">
                             <button
                               onClick={() => updateCartQty(item.productId, -1, stock)}
-                              className="px-1.5 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors text-slate-500 h-full flex items-center justify-center"
+                              className="px-2.5 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors text-slate-500 h-full flex items-center justify-center"
                             >
-                              <FiMinus className="text-[9px]" />
+                              <FiMinus className="text-xs" />
                             </button>
                             <input
                               type="number"
@@ -453,33 +464,33 @@ export const Sales = () => {
                                 if (val < 1) val = 1;
                                 updateCartQtyVal(item.productId, val);
                               }}
-                              className="w-8 text-center text-xs font-bold bg-transparent border-0 outline-none p-0 focus:outline-none focus:ring-0 focus:border-0"
+                              className="w-12 text-center text-sm font-black bg-transparent border-0 outline-none p-0 focus:outline-none focus:ring-0 focus:border-0"
                             />
                             <button
                               onClick={() => updateCartQty(item.productId, 1, stock)}
-                              className="px-1.5 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors text-slate-500 h-full flex items-center justify-center"
+                              className="px-2.5 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors text-slate-500 h-full flex items-center justify-center"
                             >
-                              <FiPlus className="text-[9px]" />
+                              <FiPlus className="text-xs" />
                             </button>
                           </div>
 
                           {/* Right: Total Price */}
-                          <div className="text-right shrink-0 min-w-[70px]">
-                            <span className="text-xs font-black dark:text-slate-200">{formatCurrency(item.price * item.qty)}</span>
-                            <p className="text-[9px] text-slate-400 font-mono -mt-0.5">{formatCurrency(item.price)} each</p>
+                          <div className="text-right shrink-0 min-w-[80px]">
+                            <span className="text-sm font-black dark:text-slate-200">{formatCurrency(item.price * item.qty)}</span>
+                            <p className="text-[10px] text-slate-400 font-mono -mt-0.5">{formatCurrency(item.price)} each</p>
                           </div>
                         </div>
 
                         {/* Optional IMEI Dropdown (fits nested underneath) */}
                         {item.imeiRequired && (
-                          <div className="flex items-center gap-2 pl-6 pr-2">
-                            <span className="text-[9px] font-bold text-blue-600 dark:text-blue-400 bg-blue-500/10 px-1 rounded flex items-center gap-0.5"><FiCpu /> IMEI:</span>
+                          <div className="flex items-center gap-2.5 pl-8 pr-2">
+                            <span className="text-[10px] font-bold text-blue-600 dark:text-blue-400 bg-blue-500/10 px-1.5 py-0.5 rounded flex items-center gap-0.5"><FiCpu /> IMEI:</span>
                             <Select
                               value={item.imei}
                               onChange={(e) => updateCartImei(item.productId, e.target.value)}
                               options={item.imeiList}
                               placeholder="-- Select IMEI --"
-                              className="py-0 px-1 text-[10px] h-6 min-h-0 flex-1 bg-transparent border-slate-200 dark:border-slate-800"
+                              className="py-0.5 px-2 text-xs h-7 min-h-0 flex-1 bg-transparent border-slate-200 dark:border-slate-800"
                             />
                           </div>
                         )}
@@ -491,75 +502,128 @@ export const Sales = () => {
             </div>
 
             {/* Cart summary */}
-            <div className="border-t border-slate-100 dark:border-slate-800 pt-4 mt-4 space-y-3">
-              <div className="grid grid-cols-3 gap-2">
-                <Select
-                  label="Select Customer"
-                  size="sm"
-                  value={selectedCustomerId}
-                  onChange={(e) => {
-                    const val = e.target.value;
-                    setSelectedCustomerId(val);
-                    if (val === 'walk-in') {
-                      setCustomerName('Walk-in Customer');
-                      setCustomerPhone('');
-                    } else {
-                      const found = customers.find(c => c.id === val);
-                      if (found) {
-                        setCustomerName(found.name);
-                        setCustomerPhone(found.phone);
+            <div className="border-t border-slate-100 dark:border-slate-800 pt-4 mt-auto space-y-4">
+              {/* Customer Selection and details */}
+              <div className="bg-slate-50 dark:bg-slate-800/40 p-3 rounded-xl border border-slate-200/50 dark:border-slate-800/20 space-y-2">
+                <div className="flex items-center justify-between gap-3">
+                  <span className="text-xs font-bold text-slate-500 uppercase tracking-wide">Customer Details</span>
+                  <Select
+                    value={selectedCustomerId}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setSelectedCustomerId(val);
+                      if (val === 'walk-in') {
+                        setCustomerName('Walk-in Customer');
+                        setCustomerPhone('');
+                      } else {
+                        const found = customers.find(c => c.id === val);
+                        if (found) {
+                          setCustomerName(found.name);
+                          setCustomerPhone(found.phone);
+                        }
                       }
-                    }
-                  }}
-                  options={[
-                    { value: 'walk-in', label: 'Walk-in Customer' },
-                    ...customers.map(c => ({ value: c.id, label: `${c.name} (${c.phone})` }))
-                  ]}
-                />
-                <Input
-                  label="Customer Name"
-                  placeholder="Walk-in Customer"
-                  size="sm"
-                  value={customerName}
-                  onChange={(e) => setCustomerName(e.target.value)}
-                  disabled={selectedCustomerId !== 'walk-in'}
-                />
-                <Input
-                  label="Customer Phone"
-                  placeholder="e.g. 9876543210"
-                  size="sm"
-                  value={customerPhone}
-                  onChange={(e) => setCustomerPhone(e.target.value)}
-                  disabled={selectedCustomerId !== 'walk-in'}
-                />
+                    }}
+                    options={[
+                      { value: 'walk-in', label: 'Walk-in Customer (Default)' },
+                      ...customers.map(c => ({ value: c.id, label: `${c.name} (${c.phone})` }))
+                    ]}
+                    className="py-1 text-xs max-w-[220px]"
+                  />
+                </div>
+
+                {selectedCustomerId === 'walk-in' ? (
+                  <div className="grid grid-cols-2 gap-2 pt-1.5 border-t border-slate-200/40 dark:border-slate-800/20">
+                    <Input
+                      label="Customer Name"
+                      placeholder="Walk-in Customer"
+                      size="sm"
+                      value={customerName}
+                      onChange={(e) => setCustomerName(e.target.value)}
+                    />
+                    <Input
+                      label="Customer Phone"
+                      placeholder="e.g. 9876543210"
+                      size="sm"
+                      value={customerPhone}
+                      onChange={(e) => setCustomerPhone(e.target.value)}
+                    />
+                  </div>
+                ) : (
+                  <div className="flex items-center justify-between bg-blue-500/5 border border-blue-500/10 rounded-lg p-2 text-xs text-blue-600 dark:text-blue-400 font-semibold mt-1">
+                    <div className="flex items-center gap-1.5">
+                      <FiUser />
+                      <span>{customerName}</span>
+                      <span className="text-slate-400 font-normal">({customerPhone || 'No Phone'})</span>
+                    </div>
+                    <button
+                      onClick={() => {
+                        setSelectedCustomerId('walk-in');
+                        setCustomerName('Walk-in Customer');
+                        setCustomerPhone('');
+                      }}
+                      className="text-[10px] text-red-500 hover:text-red-700 font-bold uppercase transition-colors"
+                    >
+                      Clear
+                    </button>
+                  </div>
+                )}
               </div>
 
-              <div className="grid grid-cols-2 gap-2">
-                <Input
-                  label="Discount Value (₹)"
-                  type="number"
-                  placeholder="0"
-                  size="sm"
-                  value={discount}
-                  onChange={(e) => setDiscount(Number(e.target.value))}
-                />
-                <Select
-                  label="Payment Method"
-                  options={PAYMENT_METHODS}
-                  size="sm"
-                  value={paymentMethod}
-                  onChange={(e) => setPaymentMethod(e.target.value)}
-                />
+              {/* Discount and Payment Grid */}
+              <div className="grid grid-cols-12 gap-3 items-end">
+                <div className="col-span-4">
+                  <Input
+                    label="Discount (₹)"
+                    type="number"
+                    placeholder="0"
+                    size="sm"
+                    value={discount}
+                    onChange={(e) => setDiscount(Number(e.target.value))}
+                    className="h-8"
+                  />
+                </div>
+                <div className="col-span-8">
+                  <div className="flex flex-col gap-1">
+                    <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wide">
+                      Payment Method
+                    </label>
+                    <div className="grid grid-cols-5 gap-1">
+                      {PAYMENT_METHODS.map(pm => {
+                        const isActive = paymentMethod === pm.value;
+                        return (
+                          <button
+                            key={pm.value}
+                            type="button"
+                            onClick={() => setPaymentMethod(pm.value)}
+                            className={`py-1 px-0.5 rounded-lg border transition-all flex flex-col items-center justify-center gap-0.5 h-9 ${
+                              isActive
+                                ? 'bg-blue-600 border-blue-600 text-white shadow-sm font-black'
+                                : 'bg-slate-50 dark:bg-slate-800/40 border-slate-200 dark:border-slate-700 dark:hover:border-slate-600 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-850 font-semibold'
+                            }`}
+                          >
+                            {pm.value === 'cash' && <FiDollarSign className="text-xs shrink-0" />}
+                            {pm.value === 'card' && <FiCreditCard className="text-xs shrink-0" />}
+                            {pm.value === 'upi' && <FiSmartphone className="text-xs shrink-0" />}
+                            {pm.value === 'bank' && <FiSend className="text-xs shrink-0" />}
+                            {pm.value === 'credit' && <FiUser className="text-xs shrink-0" />}
+                            <span className="text-[8px] truncate w-full text-center leading-none mt-0.5">{pm.label}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
               </div>
 
-              <div className="space-y-1 text-xs border-t border-slate-100 dark:border-slate-800 pt-3">
+              {/* Polished Invoice Totals Box */}
+              <div className="bg-slate-50 dark:bg-slate-800/40 p-4 rounded-xl border border-slate-200/50 dark:border-slate-800/20 space-y-2 text-sm">
                 <div className="flex justify-between text-slate-400">
                   <span>Subtotal:</span>
-                  <span>{formatCurrency(cartSubtotal)}</span>
+                  <span className="font-semibold text-slate-700 dark:text-slate-300">{formatCurrency(cartSubtotal)}</span>
                 </div>
                 <div className="flex justify-between text-slate-400">
                   <span>GST Taxes (18%):</span>
-                  <span>{formatCurrency(cartTax)}</span>
+                  <span className="font-semibold text-slate-700 dark:text-slate-300">{formatCurrency(cartTax)}</span>
                 </div>
                 {discount > 0 && (
                   <div className="flex justify-between text-red-500 font-medium">
@@ -567,9 +631,9 @@ export const Sales = () => {
                     <span>-{formatCurrency(cartDiscountVal)}</span>
                   </div>
                 )}
-                <div className="flex justify-between text-sm font-extrabold text-slate-800 dark:text-slate-100 pt-1">
+                <div className="flex justify-between text-lg font-black text-slate-800 dark:text-slate-100 border-t border-slate-200/40 dark:border-slate-800/20 pt-2.5 mt-1">
                   <span>Total Amount:</span>
-                  <span>{formatCurrency(cartTotal)}</span>
+                  <span className="text-blue-600 dark:text-blue-400">{formatCurrency(cartTotal)}</span>
                 </div>
               </div>
 
