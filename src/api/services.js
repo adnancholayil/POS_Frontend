@@ -210,6 +210,28 @@ export const productApi = {
       data: list.map(mapProductFromBackend)
     };
   }),
+
+  getByBarcode: async (barcode) => {
+    const res = await api.get(`/products/barcode/${barcode}`);
+    const p = res.data?.data || res.data;
+    if (!p) return null;
+    
+    let stock = 0;
+    let imeiList = [];
+    try {
+      const inventoryRes = await api.get('/inventory', { params: { product: p._id } });
+      const inv = inventoryRes.data?.data?.items?.[0] || {};
+      stock = inv.quantity || 0;
+      imeiList = inv.imeiList || [];
+    } catch (err) {
+      console.error('Error fetching inventory for product barcode scan', err);
+    }
+    
+    const mapped = mapProductFromBackend(p);
+    mapped.stock = stock;
+    mapped.imeiList = imeiList;
+    return { data: mapped };
+  },
 };
 
 // ─── INVENTORY ────────────────────────────────────────────────────────────────

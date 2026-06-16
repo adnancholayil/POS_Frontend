@@ -34,6 +34,14 @@ export const Sales = () => {
   }, [location.pathname]);
   const [posSearch, setPosSearch] = useState('');
   const [posCategory, setPosCategory] = useState('');
+  const [barcodeSearch, setBarcodeSearch] = useState('');
+  const barcodeInputRef = React.useRef(null);
+
+  React.useEffect(() => {
+    if (activeTab === 'pos' && barcodeInputRef.current) {
+      barcodeInputRef.current.focus();
+    }
+  }, [activeTab]);
 
   // POS State
   const [cart, setCart] = useState([]);
@@ -116,6 +124,37 @@ export const Sales = () => {
         imei: ''
       }]);
     }
+    setTimeout(() => barcodeInputRef.current?.focus(), 50);
+  };
+
+  const handleBarcodeScan = async (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      const code = barcodeSearch.trim();
+      if (!code) return;
+
+      const matched = products.find(p => p.barcode && p.barcode.toLowerCase() === code.toLowerCase());
+      if (matched) {
+        addToCart(matched);
+        addToast(`"${matched.name}" added to cart.`, 'success');
+        setBarcodeSearch('');
+      } else {
+        try {
+          const res = await productApi.getByBarcode(code);
+          if (res && res.data) {
+            addToCart(res.data);
+            addToast(`"${res.data.name}" added to cart.`, 'success');
+          } else {
+            addToast(`No product found with barcode "${code}"`, 'error');
+          }
+        } catch (err) {
+          addToast(`No product found with barcode "${code}"`, 'error');
+        } finally {
+          setBarcodeSearch('');
+        }
+      }
+      setTimeout(() => barcodeInputRef.current?.focus(), 50);
+    }
   };
 
   const updateCartQty = (productId, delta, maxStock) => {
@@ -181,7 +220,9 @@ export const Sales = () => {
 
   // Filter items
   const filteredProducts = products.filter(p => {
-    const matchesSearch = p.name.toLowerCase().includes(posSearch.toLowerCase()) || p.sku.toLowerCase().includes(posSearch.toLowerCase());
+    const matchesSearch = p.name.toLowerCase().includes(posSearch.toLowerCase()) || 
+                          p.sku.toLowerCase().includes(posSearch.toLowerCase()) ||
+                          (p.barcode && p.barcode.toLowerCase().includes(posSearch.toLowerCase()));
     const matchesCat = !posCategory || p.category === posCategory;
     return matchesSearch && matchesCat;
   });
@@ -238,7 +279,23 @@ export const Sales = () => {
         <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
           {/* Left panel: Product Selector */}
           <div className="lg:col-span-3 space-y-4">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div className="sm:col-span-1">
+                <Input
+                  ref={barcodeInputRef}
+                  value={barcodeSearch}
+                  onChange={(e) => setBarcodeSearch(e.target.value)}
+                  onKeyDown={handleBarcodeScan}
+                  placeholder="Scan barcode directly..."
+                  size="md"
+                  className="font-mono pr-8"
+                  icon={
+                    <svg stroke="currentColor" fill="none" strokeWidth="2" viewBox="0 0 24 24" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4 text-blue-500 animate-pulse" xmlns="http://www.w3.org/2000/svg">
+                      <path d="M3 5v14M6 5v14M10 5v14M13 5v14M18 5v14M21 5v14M16 5v14M8 5v14" />
+                    </svg>
+                  }
+                />
+              </div>
               <SearchInput
                 value={posSearch}
                 onChange={setPosSearch}

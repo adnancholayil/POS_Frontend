@@ -129,6 +129,7 @@ export const Products = () => {
     setEditingProduct(product);
     setEditValue('name', product.name);
     setEditValue('sku', product.sku);
+    setEditValue('barcode', product.barcode || '');
     setEditValue('category', product.category);
     setEditValue('cost', product.cost);
     setEditValue('price', product.price);
@@ -147,7 +148,17 @@ export const Products = () => {
   });
 
   const columns = [
-    { label: 'SKU / Model ID', key: 'sku', className: 'font-semibold font-mono text-xs text-slate-500' },
+    {
+      label: 'SKU / Barcode',
+      key: 'sku',
+      className: 'font-semibold font-mono text-xs text-slate-500',
+      render: (val, row) => (
+        <div className="space-y-0.5">
+          <p className="font-semibold font-mono text-xs text-slate-500">{val}</p>
+          {row.barcode && <p className="text-[10px] text-slate-400 font-mono">BC: {row.barcode}</p>}
+        </div>
+      )
+    },
     { label: 'Product Name', key: 'name', className: 'font-bold text-slate-800 dark:text-slate-200' },
     { label: 'Category', key: 'category' },
     { label: 'Cost Price', key: 'cost', render: (val) => formatCurrency(val) },
@@ -280,7 +291,7 @@ export const Products = () => {
       {/* Add Product Modal */}
       <Modal isOpen={isAddOpen} onClose={handleCloseAdd} title="Add New Product Intake" size="lg">
         <form onSubmit={handleAddSubmit(handleCreate)} className="p-6 space-y-4">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <Input
               label="Product Name"
               placeholder="e.g. Apple iPhone 15 Pro"
@@ -294,6 +305,12 @@ export const Products = () => {
               error={errorsAdd.sku?.message}
               required
               {...registerAdd('sku', { required: 'SKU is required' })}
+            />
+            <Input
+              label="Barcode (optional)"
+              placeholder="e.g. 190199000142"
+              error={errorsAdd.barcode?.message}
+              {...registerAdd('barcode')}
             />
           </div>
 
@@ -365,7 +382,7 @@ export const Products = () => {
       {/* Edit Product Modal */}
       <Modal isOpen={isEditOpen} onClose={() => setIsEditOpen(false)} title="Modify Catalog Product Details" size="lg">
         <form onSubmit={handleEditSubmit(handleUpdate)} className="p-6 space-y-4">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <Input
               label="Product Name"
               error={errorsEdit.name?.message}
@@ -377,6 +394,12 @@ export const Products = () => {
               error={errorsEdit.sku?.message}
               required
               {...registerEdit('sku', { required: 'SKU is required' })}
+            />
+            <Input
+              label="Barcode (optional)"
+              placeholder="e.g. 190199000142"
+              error={errorsEdit.barcode?.message}
+              {...registerEdit('barcode')}
             />
           </div>
 
