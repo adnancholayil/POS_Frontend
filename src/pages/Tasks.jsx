@@ -1,51 +1,74 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
-  FiCheckSquare, FiPlus, FiClock, FiUser,
-  FiArrowRight, FiCheckCircle, FiPlay, FiTrash2
+  FiCheckSquare, FiPlus, FiUser,
+  FiCheckCircle, FiPlay, FiTrash2, FiCalendar, FiFlag, FiAlertCircle
 } from 'react-icons/fi';
 import { taskApi, staffApi } from '../api/services';
 import { Modal, ConfirmDialog } from '../components/ui/Modal';
-import { Input, Select, Textarea } from '../components/ui/Input';
+import { Input, Textarea } from '../components/ui/Input';
 import { Button } from '../components/ui/Button';
 import { Badge } from '../components/ui/Badge';
 import { useToast } from '../hooks/useToast';
 import { TASK_STATUS, TASK_PRIORITY, TASK_PRIORITY_COLORS } from '../utils/constants';
 
+const COLUMN_CONFIG = [
+  { key: TASK_STATUS.PENDING,     label: 'To Do',       color: 'bg-slate-400', dot: 'bg-slate-400' },
+  { key: TASK_STATUS.IN_PROGRESS, label: 'In Progress', color: 'bg-blue-500',  dot: 'bg-blue-500'  },
+  { key: TASK_STATUS.COMPLETED,   label: 'Completed',   color: 'bg-green-500', dot: 'bg-green-500' },
+];
+
 export const Tasks = () => {
   const queryClient = useQueryClient();
   const { addToast } = useToast();
 
-  // Modals state
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [deleteTask, setDeleteTask] = useState(null);
 
-  // Form
-  const { register: registerAdd, handleSubmit: handleSubmitAdd, reset: resetAdd, formState: { errors: errorsAdd } } = useForm();
+  const {
+    register: reg,
+    handleSubmit,
+    reset,
+    formState: { errors },
+    watch,
+  } = useForm({
+    defaultValues: { title: '', description: '', assignedTo: '', priority: 'normal', dueDate: '' }
+  });
 
-  // Queries
-  const { data: tasks = [], isLoading } = useQuery({
+  // ── Queries ──────────────────────────────────────────────────
+  const { data: tasks = [], isLoading, error: tasksError } = useQuery({
     queryKey: ['tasks'],
-    queryFn: () => taskApi.getAll().then(res => res.data),
+    queryFn: () => taskApi.getAll().then(r => r.data),
+    retry: 1,
   });
 
-  const { data: staff = [] } = useQuery({
+  const { data: staff = [], isLoading: staffLoading } = useQuery({
     queryKey: ['staff'],
-    queryFn: () => staffApi.getAll().then(res => res.data),
+    queryFn: () => staffApi.getAll().then(r => r.data),
+    retry: 1,
   });
 
-  // Mutations
+  // ── Mutations ────────────────────────────────────────────────
   const createMutation = useMutation({
     mutationFn: (data) => taskApi.create(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['tasks'] });
-      addToast('Task created successfully', 'success');
+      addToast('Task created successfully!', 'success');
       setIsAddOpen(false);
-      resetAdd();
+      reset();
     },
-    onError: () => addToast('Failed to create task', 'error'),
+    onError: (err) => {
+      // axiosInstance normalizes error: err IS already the response body { message, errors }
+      const msg = err?.message || 'Failed to create task';
+      const details = err?.errors;
+      if (Array.isArray(details) && details.length > 0) {
+        addToast(`${msg}: ${details.map(d => d.message).join(', ')}`, 'error');
+      } else {
+        addToast(msg, 'error');
+      }
+    },
   });
 
   const statusMutation = useMutation({
@@ -54,193 +77,286 @@ export const Tasks = () => {
       queryClient.invalidateQueries({ queryKey: ['tasks'] });
       addToast('Task status updated', 'success');
     },
-    onError: () => addToast('Failed to update task', 'error'),
+    onError: (err) => {
+      addToast(err?.message || 'Failed to update status', 'error');
+    },
   });
 
   const deleteMutation = useMutation({
     mutationFn: (id) => taskApi.delete(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['tasks'] });
-      addToast('Task deleted successfully', 'success');
+      addToast('Task deleted', 'success');
       setDeleteTask(null);
     },
     onError: () => addToast('Failed to delete task', 'error'),
   });
 
-  const handleCreate = (data) => {
+  const onSubmit = (data) => {
     createMutation.mutate(data);
   };
 
-  // Group tasks by status
-  const columnsData = {
-    [TASK_STATUS.PENDING]:     tasks.filter(t => t.status === TASK_STATUS.PENDING),
-    [TASK_STATUS.IN_PROGRESS]: tasks.filter(t => t.status === TASK_STATUS.IN_PROGRESS),
-    [TASK_STATUS.COMPLETED]:   tasks.filter(t => t.status === TASK_STATUS.COMPLETED),
-  };
+  // ── Group tasks by status ─────────────────────────────────────
+  const grouped = COLUMN_CONFIG.reduce((acc, col) => {
+    acc[col.key] = tasks.filter(t => t.status === col.key);
+    return acc;
+  }, {});
 
-  const columnLabels = {
-    [TASK_STATUS.PENDING]:     'Backlog / To Do',
-    [TASK_STATUS.IN_PROGRESS]: 'In Progress',
-    [TASK_STATUS.COMPLETED]:   'Completed',
-  };
+  const today = new Date().toISOString().split('T')[0];
 
   return (
     <div className="space-y-6">
-      {/* Header */}
+      {/* ─── Header ─── */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-black text-slate-800 dark:text-slate-100 tracking-tight">Tasks Manager</h1>
-          <p className="text-xs text-slate-500 dark:text-slate-400">Assign responsibilities, organize daily checklists, and trace execution status.</p>
+          <h1 className="text-2xl font-black text-slate-800 dark:text-slate-100 tracking-tight flex items-center gap-2">
+            <FiCheckSquare className="text-blue-500" /> Tasks Manager
+          </h1>
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+            Assign, track and complete shop tasks across your team.
+          </p>
         </div>
-        <div className="flex gap-2">
-          <Button variant="primary" className="rounded-xl px-4 py-2 flex items-center gap-2 shadow-sm" onClick={() => setIsAddOpen(true)}>
-            <FiPlus /> Create Task
-          </Button>
-        </div>
+        <Button
+          variant="primary"
+          className="rounded-xl px-4 py-2 flex items-center gap-2 shadow-sm"
+          onClick={() => setIsAddOpen(true)}
+        >
+          <FiPlus /> Create Task
+        </Button>
       </div>
 
-      {isLoading ? (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {[1, 2, 3].map(c => <div key={c} className="h-96 bg-slate-200 dark:bg-slate-800 rounded-2xl animate-pulse" />)}
-        </div>
-      ) : (
-        /* Kanban Columns Grid */
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {Object.entries(columnsData).map(([status, colTasks]) => (
-            <div key={status} className="bg-slate-50 dark:bg-slate-900/40 border border-slate-200/50 dark:border-slate-800 rounded-2xl p-4 flex flex-col h-[70vh]">
-              {/* Column header */}
-              <div className="flex items-center justify-between mb-4 border-b border-slate-200 dark:border-slate-800 pb-2">
-                <h3 className="text-xs font-black text-slate-700 dark:text-slate-300 uppercase tracking-wider">{columnLabels[status]}</h3>
-                <span className="text-xs font-extrabold px-2 py-0.5 bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-400 rounded-full">{colTasks.length}</span>
-              </div>
-
-              {/* Task list wrapper */}
-              <div className="flex-1 overflow-y-auto space-y-3 pr-1">
-                {colTasks.length === 0 ? (
-                  <p className="text-[11px] text-slate-400 italic text-center py-10">No tasks in this column</p>
-                ) : (
-                  colTasks.map(task => {
-                    const assignedStaff = staff.find(s => s.id === task.assignedTo);
-                    return (
-                      <motion.div
-                        key={task.id}
-                        layoutId={task.id}
-                        className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-4 rounded-xl shadow-sm space-y-3 relative group"
-                      >
-                        <div className="flex justify-between items-start gap-2">
-                          <p className="text-xs font-bold text-slate-800 dark:text-slate-200 leading-snug">{task.title}</p>
-                          <button
-                            onClick={() => setDeleteTask(task)}
-                            className="opacity-0 group-hover:opacity-100 p-1 rounded hover:bg-red-50 text-red-500 transition-opacity"
-                            title="Delete Task"
-                          >
-                            <FiTrash2 className="text-xs" />
-                          </button>
-                        </div>
-
-                        {task.description && (
-                          <p className="text-[11px] text-slate-400 truncate-2 leading-relaxed">{task.description}</p>
-                        )}
-
-                        <div className="flex flex-wrap items-center justify-between gap-2 border-t pt-2 border-slate-100 dark:border-slate-800">
-                          {/* Assignee / Dates */}
-                          <div className="flex items-center gap-1.5 text-[10px] text-slate-500 font-semibold">
-                            <FiUser /> {assignedStaff ? assignedStaff.name : 'Unassigned'}
-                          </div>
-
-                          <Badge variant="custom" className={`${TASK_PRIORITY_COLORS[task.priority] || ''} text-[9px] uppercase font-bold`}>
-                            {task.priority}
-                          </Badge>
-                        </div>
-
-                        {/* Transitions buttons */}
-                        <div className="flex justify-end gap-1.5 border-t pt-2 border-slate-100 dark:border-slate-800/40">
-                          {task.status === TASK_STATUS.PENDING && (
-                            <button
-                              onClick={() => statusMutation.mutate({ id: task.id, status: TASK_STATUS.IN_PROGRESS })}
-                              className="text-[10px] font-bold text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-0.5"
-                            >
-                              Start <FiPlay className="text-[9px]" />
-                            </button>
-                          )}
-                          {task.status === TASK_STATUS.IN_PROGRESS && (
-                            <button
-                              onClick={() => statusMutation.mutate({ id: task.id, status: TASK_STATUS.COMPLETED })}
-                              className="text-[10px] font-bold text-green-600 dark:text-green-400 hover:underline flex items-center gap-0.5"
-                            >
-                              Complete <FiCheckCircle className="text-[9px]" />
-                            </button>
-                          )}
-                        </div>
-                      </motion.div>
-                    );
-                  })
-                )}
-              </div>
-            </div>
-          ))}
+      {/* ─── Error banner ─── */}
+      {tasksError && (
+        <div className="flex items-center gap-2 text-sm text-red-600 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl px-4 py-3">
+          <FiAlertCircle /> Failed to load tasks: {tasksError?.response?.data?.message || tasksError.message}
         </div>
       )}
 
-      {/* Add Task Modal */}
-      <Modal isOpen={isAddOpen} onClose={() => setIsAddOpen(false)} title="Create Shop Task" size="md">
-        <form onSubmit={handleSubmitAdd(handleCreate)} className="p-6 space-y-4">
+      {/* ─── Kanban ─── */}
+      {isLoading ? (
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {[1, 2, 3].map(i => <div key={i} className="h-96 bg-slate-200 dark:bg-slate-800 rounded-2xl animate-pulse" />)}
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {COLUMN_CONFIG.map(col => {
+            const colTasks = grouped[col.key] || [];
+            return (
+              <div
+                key={col.key}
+                className="bg-slate-50 dark:bg-slate-900/40 border border-slate-200/60 dark:border-slate-800 rounded-2xl p-4 flex flex-col h-[72vh]"
+              >
+                {/* Column header */}
+                <div className="flex items-center justify-between mb-4 pb-2 border-b border-slate-200 dark:border-slate-800">
+                  <div className="flex items-center gap-2">
+                    <span className={`w-2 h-2 rounded-full ${col.dot}`} />
+                    <h3 className="text-xs font-black text-slate-700 dark:text-slate-300 uppercase tracking-wider">
+                      {col.label}
+                    </h3>
+                  </div>
+                  <span className="text-xs font-extrabold px-2 py-0.5 bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-400 rounded-full">
+                    {colTasks.length}
+                  </span>
+                </div>
+
+                {/* Task cards */}
+                <div className="flex-1 overflow-y-auto space-y-3 pr-1">
+                  {colTasks.length === 0 ? (
+                    <p className="text-[11px] text-slate-400 italic text-center py-10">No tasks here</p>
+                  ) : (
+                    <AnimatePresence>
+                      {colTasks.map(task => (
+                        <motion.div
+                          key={task.id}
+                          layout
+                          initial={{ opacity: 0, y: 8 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          exit={{ opacity: 0, scale: 0.95 }}
+                          className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-4 rounded-xl shadow-sm space-y-3 relative group"
+                        >
+                          {/* Title + delete */}
+                          <div className="flex justify-between items-start gap-2">
+                            <p className="text-xs font-bold text-slate-800 dark:text-slate-200 leading-snug flex-1">
+                              {task.title}
+                            </p>
+                            <button
+                              onClick={() => setDeleteTask(task)}
+                              className="opacity-0 group-hover:opacity-100 p-1 rounded hover:bg-red-50 dark:hover:bg-red-900/20 text-red-400 hover:text-red-600 transition-all flex-shrink-0"
+                              title="Delete task"
+                            >
+                              <FiTrash2 className="text-sm" />
+                            </button>
+                          </div>
+
+                          {task.description && (
+                            <p className="text-[11px] text-slate-400 dark:text-slate-500 leading-relaxed line-clamp-2">
+                              {task.description}
+                            </p>
+                          )}
+
+                          {/* Meta row */}
+                          <div className="flex flex-wrap items-center justify-between gap-2 border-t pt-2 border-slate-100 dark:border-slate-800">
+                            <div className="flex items-center gap-1.5 text-[10px] text-slate-500 dark:text-slate-400 font-semibold">
+                              <FiUser className="flex-shrink-0" />
+                              {/* Use assignedToName from normalized task (set from backend populate) */}
+                              {task.assignedToName || staff.find(s => s.id === task.assignedTo)?.name || 'Unassigned'}
+                            </div>
+
+                            {task.dueDate && (
+                              <div className="flex items-center gap-1 text-[10px] text-slate-400 font-medium">
+                                <FiCalendar className="flex-shrink-0" />
+                                {new Date(task.dueDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}
+                              </div>
+                            )}
+
+                            <Badge
+                              variant="custom"
+                              className={`${TASK_PRIORITY_COLORS[task.priority] || 'bg-slate-100 text-slate-600'} text-[9px] uppercase font-bold flex items-center gap-0.5`}
+                            >
+                              <FiFlag className="text-[8px]" /> {task.priority}
+                            </Badge>
+                          </div>
+
+                          {/* Action buttons */}
+                          <div className="flex justify-end gap-2 border-t pt-2 border-slate-100 dark:border-slate-800/40">
+                            {task.status === TASK_STATUS.PENDING && (
+                              <button
+                                onClick={() => statusMutation.mutate({ id: task.id, status: TASK_STATUS.IN_PROGRESS })}
+                                disabled={statusMutation.isPending}
+                                className="text-[10px] font-bold text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-1 disabled:opacity-50"
+                              >
+                                <FiPlay className="text-[9px]" /> Start
+                              </button>
+                            )}
+                            {task.status === TASK_STATUS.IN_PROGRESS && (
+                              <button
+                                onClick={() => statusMutation.mutate({ id: task.id, status: TASK_STATUS.COMPLETED })}
+                                disabled={statusMutation.isPending}
+                                className="text-[10px] font-bold text-green-600 dark:text-green-400 hover:underline flex items-center gap-1 disabled:opacity-50"
+                              >
+                                <FiCheckCircle className="text-[9px]" /> Complete
+                              </button>
+                            )}
+                          </div>
+                        </motion.div>
+                      ))}
+                    </AnimatePresence>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* ─── Create Task Modal ─── */}
+      <Modal
+        isOpen={isAddOpen}
+        onClose={() => { setIsAddOpen(false); reset(); }}
+        title="Create New Task"
+        size="md"
+      >
+        <form onSubmit={handleSubmit(onSubmit)} className="p-6 space-y-4">
+          {/* Title */}
           <Input
-            label="Task Summary / Title"
-            placeholder="e.g. Replenish Type-C cables inventory"
-            error={errorsAdd.title?.message}
+            label="Task Title"
+            placeholder="e.g. Replenish Type-C cable stock"
+            error={errors.title?.message}
             required
-            {...registerAdd('title', { required: 'Title is required' })}
+            {...reg('title', { required: 'Task title is required' })}
           />
 
+          {/* Description */}
           <Textarea
-            label="Detailed Task Description"
-            placeholder="Log specific requirements, checklist items, or repair details..."
-            {...registerAdd('description')}
+            label="Description (optional)"
+            placeholder="Describe what needs to be done..."
+            rows={2}
+            {...reg('description')}
           />
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <Select
-              label="Assigned Employee"
-              options={staff.map(s => ({ value: s.id, label: s.name }))}
-              placeholder="-- Choose Staff --"
-              error={errorsAdd.assignedTo?.message}
-              required
-              {...registerAdd('assignedTo', { required: 'Please assign to staff' })}
-            />
-            <Select
-              label="Priority level"
-              options={Object.entries(TASK_PRIORITY).map(([k, v]) => ({ value: v, label: k }))}
-              error={errorsAdd.priority?.message}
-              required
-              {...registerAdd('priority', { required: 'Priority is required' })}
-            />
+            {/* Assigned To */}
+            <div className="flex flex-col gap-1">
+              <label className="text-xs font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wide">
+                Assign To <span className="text-red-500">*</span>
+              </label>
+              <select
+                className={`w-full bg-white dark:bg-slate-800 border rounded-lg px-3 py-2 text-sm text-slate-800 dark:text-slate-100 outline-none transition-all cursor-pointer focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 ${errors.assignedTo ? 'border-red-400' : 'border-slate-200 dark:border-slate-700'}`}
+                {...reg('assignedTo', { required: 'Please select a staff member', validate: v => v !== '' || 'Please select a staff member' })}
+              >
+                <option value="">
+                  {staffLoading ? 'Loading staff...' : staff.length === 0 ? 'No staff available' : '-- Select Staff --'}
+                </option>
+                {staff.map(s => (
+                  <option key={s.id} value={s.id}>
+                    {s.name} ({s.role})
+                  </option>
+                ))}
+              </select>
+              {errors.assignedTo && <p className="text-xs text-red-500 font-medium">{errors.assignedTo.message}</p>}
+            </div>
+
+            {/* Priority */}
+            <div className="flex flex-col gap-1">
+              <label className="text-xs font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wide">
+                Priority <span className="text-red-500">*</span>
+              </label>
+              <select
+                className={`w-full bg-white dark:bg-slate-800 border rounded-lg px-3 py-2 text-sm text-slate-800 dark:text-slate-100 outline-none transition-all cursor-pointer focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 ${errors.priority ? 'border-red-400' : 'border-slate-200 dark:border-slate-700'}`}
+                {...reg('priority', { required: 'Priority is required' })}
+              >
+                {Object.entries(TASK_PRIORITY).map(([k, v]) => (
+                  <option key={v} value={v}>{k.charAt(0) + k.slice(1).toLowerCase()}</option>
+                ))}
+              </select>
+              {errors.priority && <p className="text-xs text-red-500 font-medium">{errors.priority.message}</p>}
+            </div>
+
+            {/* Due Date */}
             <Input
               label="Due Date"
               type="date"
-              error={errorsAdd.dueDate?.message}
+              min={today}
+              error={errors.dueDate?.message}
               required
-              {...registerAdd('dueDate', { required: 'Due date is required' })}
+              {...reg('dueDate', { required: 'Due date is required' })}
             />
           </div>
 
+          {/* Buttons */}
           <div className="flex gap-3 justify-end pt-4 border-t border-slate-100 dark:border-slate-800">
-            <Button variant="secondary" className="rounded-xl px-5" onClick={() => setIsAddOpen(false)} type="button">Cancel</Button>
-            <Button type="submit" variant="primary" className="rounded-xl px-5" loading={createMutation.isPending}>Create Task</Button>
+            <Button
+              variant="secondary"
+              className="rounded-xl px-5"
+              type="button"
+              onClick={() => { setIsAddOpen(false); reset(); }}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="submit"
+              variant="primary"
+              className="rounded-xl px-5"
+              loading={createMutation.isPending}
+              disabled={staffLoading || staff.length === 0}
+            >
+              {staff.length === 0 ? 'No Staff Available' : 'Create Task'}
+            </Button>
           </div>
         </form>
       </Modal>
 
-      {/* Delete Confirmation */}
+      {/* ─── Delete Confirm ─── */}
       <ConfirmDialog
         isOpen={!!deleteTask}
         onClose={() => setDeleteTask(null)}
         onConfirm={() => deleteMutation.mutate(deleteTask.id)}
         title="Delete Task"
-        message={`Are you sure you want to delete "${deleteTask?.title}"?`}
+        message={`Delete "${deleteTask?.title}"? This cannot be undone.`}
         loading={deleteMutation.isPending}
       />
     </div>
   );
 };
+
 export default Tasks;

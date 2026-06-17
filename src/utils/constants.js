@@ -58,13 +58,14 @@ export const REPAIR_STATUS_COLORS = {
 // Task Priorities
 export const TASK_PRIORITY = {
   LOW:    'low',
-  MEDIUM: 'medium',
+  NORMAL: 'normal',
   HIGH:   'high',
   URGENT: 'urgent',
 };
 
 export const TASK_PRIORITY_COLORS = {
   low:    'bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300',
+  normal: 'bg-blue-100 text-blue-600 dark:bg-blue-900/40 dark:text-blue-300',
   medium: 'bg-blue-100 text-blue-600 dark:bg-blue-900/40 dark:text-blue-300',
   high:   'bg-orange-100 text-orange-600 dark:bg-orange-900/40 dark:text-orange-300',
   urgent: 'bg-red-100 text-red-600 dark:bg-red-900/40 dark:text-red-300',

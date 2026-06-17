@@ -681,8 +681,10 @@ export const customerApi = {
 
 // ─── STAFF / USERS ────────────────────────────────────────────────────────────
 export const staffApi = {
-  getAll: (params) => api.get('/users', { params }).then(res => {
-    const list = res.data?.data?.users || res.data?.data || [];
+  getAll: (params) => api.get('/users', { params: { limit: 100, ...params } }).then(res => {
+    // Backend returns { users: [...], pagination: {...} } inside data
+    const payload = res.data?.data;
+    const list = Array.isArray(payload) ? payload : (payload?.users || []);
     return {
       data: list.map(u => ({
         id: u._id,
@@ -758,41 +760,62 @@ export const staffApi = {
 };
 
 // ─── TASKS ────────────────────────────────────────────────────────────────────
+// Backend status enum:  'todo' | 'in_progress' | 'completed' | 'cancelled'
+// Frontend status enum: 'pending' | 'in_progress' | 'completed' | 'cancelled'
+// Backend priority enum: 'low' | 'normal' | 'high' | 'urgent'
+const mapTaskStatus = (s) => s === 'todo' ? 'pending' : (s || 'pending');
+const mapTaskStatusToBackend = (s) => s === 'pending' ? 'todo' : (s || 'todo');
+const mapPriorityToBackend = (p) => (p === 'medium' || !p) ? 'normal' : p;
+
+const normalizeTask = (t) => ({
+  id: t._id,
+  title: t.title,
+  description: t.description || '',
+  status: mapTaskStatus(t.status),
+  priority: t.priority || 'normal',
+  dueDate: t.dueDate,
+  // assignedTo can be populated object {_id, name, email} or just an ID string
+  assignedTo: t.assignedTo?._id || t.assignedTo || '',
+  assignedToName: t.assignedTo?.name || '',
+  assignedById: t.assignedBy?._id || t.assignedBy || '',
+  assignedByName: t.assignedBy?.name || '',
+  createdAt: t.createdAt,
+});
+
 export const taskApi = {
-  getAll: (params) => api.get('/tasks', { params }).then(res => {
-    const list = res.data?.data || [];
-    return {
-      data: list.map(t => ({
-        id: t._id,
-        title: t.title,
-        description: t.description || '',
-        status: t.status,
-        priority: t.priority,
-        dueDate: t.dueDate,
-        assignedTo: t.assignedTo?._id || t.assignedTo || ''
-      }))
-    };
+  // Backend returns { tasks: [...], pagination: {...} } inside data
+  getAll: (params) => api.get('/tasks', { params: { limit: 100, ...params } }).then(res => {
+    const payload = res.data?.data;
+    // payload could be the tasks array directly, or { tasks, pagination }
+    const list = Array.isArray(payload) ? payload : (payload?.tasks || []);
+    return { data: list.map(normalizeTask) };
   }),
 
-  getById: (id) => api.get(`/tasks/${id}`).then(res => {
-    const t = res.data?.data || {};
-    return {
-      data: {
-        id: t._id,
-        title: t.title,
-        description: t.description || '',
-        status: t.status,
-        priority: t.priority,
-        dueDate: t.dueDate,
-        assignedTo: t.assignedTo?._id || t.assignedTo || ''
-      }
-    };
+  getById: (id) => api.get(`/tasks/${id}`).then(res => ({
+    data: normalizeTask(res.data?.data || {})
+  })),
+
+  create: (data) => api.post('/tasks', {
+    title: data.title,
+    description: data.description || undefined,
+    assignedTo: data.assignedTo,
+    priority: mapPriorityToBackend(data.priority),
+    dueDate: data.dueDate || undefined,
+    // do NOT send status — backend defaults to 'todo'
   }),
 
-  create: (data) => api.post('/tasks', data),
-  update: (id, data) => api.put(`/tasks/${id}`, data),
+  update: (id, data) => api.put(`/tasks/${id}`, {
+    ...data,
+    priority: data.priority ? mapPriorityToBackend(data.priority) : undefined,
+    status: data.status ? mapTaskStatusToBackend(data.status) : undefined,
+  }),
+
   delete: (id) => api.delete(`/tasks/${id}`),
-  updateStatus: (id, data) => api.patch(`/tasks/${id}/status`, { status: data.status }),
+
+  updateStatus: (id, data) => api.patch(`/tasks/${id}/status`, {
+    status: mapTaskStatusToBackend(data.status),
+  }),
+
   getAnalytics: () => Promise.resolve({ data: {} }),
 };
 
@@ -1052,7 +1075,13 @@ export const settingsApi = {
         terms: d.terms || '',
         invoicePrefix: d.invoicePrefix || 'INV',
         repairPrefix: d.repairTicketPrefix || 'REP',
-        shopCode: d.shopCode || ''
+        shopCode: d.shopCode || '',
+        primaryColorType: d.primaryColorType || 'solid',
+        primaryColorSolid: d.primaryColorSolid || '#2563eb',
+        primaryColorGradient: d.primaryColorGradient || { from: '#06b6d4', to: '#3b82f6', angle: '135deg' },
+        secondaryColorType: d.secondaryColorType || 'solid',
+        secondaryColorSolid: d.secondaryColorSolid || '#8b5cf6',
+        secondaryColorGradient: d.secondaryColorGradient || { from: '#8b5cf6', to: '#ec4899', angle: '135deg' }
       }
     };
   }),
@@ -1070,7 +1099,13 @@ export const settingsApi = {
       purchasePrintType: data.purchasePrintType || data.printType || 'thermal',
       terms: data.terms,
       invoicePrefix: data.invoicePrefix,
-      repairTicketPrefix: data.repairPrefix
+      repairTicketPrefix: data.repairPrefix,
+      primaryColorType: data.primaryColorType,
+      primaryColorSolid: data.primaryColorSolid,
+      primaryColorGradient: data.primaryColorGradient,
+      secondaryColorType: data.secondaryColorType,
+      secondaryColorSolid: data.secondaryColorSolid,
+      secondaryColorGradient: data.secondaryColorGradient
     };
     return api.put('/settings', backendData);
   },

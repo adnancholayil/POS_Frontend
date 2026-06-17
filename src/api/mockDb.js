@@ -890,7 +890,11 @@ export const handleMockRequest = async (config) => {
   }
 
   // --- SETTINGS ---
-  if (cleanUrl === '/settings/shop') {
+  if (cleanUrl === '/settings/shop' || cleanUrl === '/settings') {
+    if (method === 'put') {
+      localStorage.setItem('pos_shop_settings', JSON.stringify(parsedData));
+      return ok({ data: parsedData });
+    }
     const shop = getOrSet('pos_shop_settings', {
       name: 'Galaxy Mobiles & Laptops',
       address: '102 Tech Plaza, Sector-18, Noida, UP, 201301',
@@ -898,14 +902,15 @@ export const handleMockRequest = async (config) => {
       email: 'support@zylox.com',
       gstin: '09AAAFZ1234F1Z1',
       printType: 'thermal',
-      terms: '1. Goods once sold cannot be taken back or exchanged without valid warranty claim.\n2. Warranty covers manufacturing defects only.\n3. Repair parts warranty is 90 days.'
+      terms: '1. Goods once sold cannot be taken back or exchanged without valid warranty claim.\n2. Warranty covers manufacturing defects only.\n3. Repair parts warranty is 90 days.',
+      primaryColorType: 'solid',
+      primaryColorSolid: '#2563eb',
+      primaryColorGradient: { from: '#06b6d4', to: '#3b82f6', angle: '135deg' },
+      secondaryColorType: 'solid',
+      secondaryColorSolid: '#8b5cf6',
+      secondaryColorGradient: { from: '#8b5cf6', to: '#ec4899', angle: '135deg' }
     });
-    return ok(shop);
-  }
-
-  if (cleanUrl === '/settings/shop' && method === 'put') {
-    localStorage.setItem('pos_shop_settings', JSON.stringify(parsedData));
-    return ok(parsedData);
+    return ok({ data: shop });
   }
 
   // --- NOTIFICATIONS ---
