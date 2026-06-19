@@ -27,6 +27,101 @@ export const Tasks = () => {
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [deleteTask, setDeleteTask] = useState(null);
 
+  const [draggingTaskId, setDraggingTaskId] = useState(null);
+  const [activeDropCol, setActiveDropCol] = useState(null);
+
+  const handleDragStart = (e, taskId) => {
+    e.dataTransfer.setData('text/plain', taskId);
+    setDraggingTaskId(taskId);
+    e.dataTransfer.effectAllowed = 'move';
+  };
+
+  const handleDragEnd = () => {
+    // Save current query tasks order to localStorage
+    const currentTasks = queryClient.getQueryData(['tasks']) || [];
+    const orderIds = currentTasks.map(t => t.id);
+    localStorage.setItem('tasks_order', JSON.stringify(orderIds));
+
+    setDraggingTaskId(null);
+    setActiveDropCol(null);
+  };
+
+  const handleDragOver = (e, columnKey) => {
+    e.preventDefault();
+    if (activeDropCol !== columnKey) {
+      setActiveDropCol(columnKey);
+    }
+
+    // If dragging over a column that has no tasks, auto-move the task to this column in the cache
+    if (draggingTaskId) {
+      queryClient.setQueryData(['tasks'], (old) => {
+        if (!old) return [];
+        const draggedTask = old.find(t => t.id === draggingTaskId);
+        if (draggedTask && draggedTask.status !== columnKey) {
+          const columnTasks = old.filter(t => t.status === columnKey);
+          if (columnTasks.length === 0) {
+            return old.map(t => t.id === draggingTaskId ? { ...t, status: columnKey } : t);
+          }
+        }
+        return old;
+      });
+    }
+  };
+
+  const handleDragOverCard = (e, targetTask) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    if (!draggingTaskId || draggingTaskId === targetTask.id) return;
+
+    queryClient.setQueryData(['tasks'], (old) => {
+      if (!old) return [];
+
+      const list = [...old];
+      const draggedIdx = list.findIndex(t => t.id === draggingTaskId);
+      const targetIdx = list.findIndex(t => t.id === targetTask.id);
+
+      if (draggedIdx === -1 || targetIdx === -1) return old;
+
+      const draggedTask = { ...list[draggedIdx] };
+
+      // Update status if they are in different columns
+      if (draggedTask.status !== targetTask.status) {
+        draggedTask.status = targetTask.status;
+      }
+
+      // Reorder
+      list.splice(draggedIdx, 1);
+      list.splice(targetIdx, 0, draggedTask);
+
+      return list;
+    });
+  };
+
+  const handleDragLeave = (e, columnKey) => {
+    e.preventDefault();
+    if (activeDropCol === columnKey) {
+      setActiveDropCol(null);
+    }
+  };
+
+  const handleDrop = (e, columnKey) => {
+    e.preventDefault();
+    setActiveDropCol(null);
+    const taskId = e.dataTransfer.getData('text/plain') || draggingTaskId;
+    if (!taskId) return;
+
+    const task = tasks.find(t => t.id === taskId);
+    if (task && task.status !== columnKey) {
+      statusMutation.mutate({ id: taskId, status: columnKey });
+    } else {
+      // Just save the new sorting order
+      const currentTasks = queryClient.getQueryData(['tasks']) || [];
+      const orderIds = currentTasks.map(t => t.id);
+      localStorage.setItem('tasks_order', JSON.stringify(orderIds));
+    }
+  };
+
   const {
     register: reg,
     handleSubmit,
@@ -43,6 +138,27 @@ export const Tasks = () => {
     queryFn: () => taskApi.getAll().then(r => r.data),
     retry: 1,
   });
+
+  const sortedTasks = React.useMemo(() => {
+    const savedOrder = localStorage.getItem('tasks_order');
+    if (!savedOrder) return tasks;
+    try {
+      const orderIds = JSON.parse(savedOrder);
+      const taskMap = new Map(tasks.map((t) => [t.id, t]));
+
+      const sorted = [];
+      orderIds.forEach((id) => {
+        if (taskMap.has(id)) {
+          sorted.push(taskMap.get(id));
+          taskMap.delete(id);
+        }
+      });
+      taskMap.forEach((task) => sorted.push(task));
+      return sorted;
+    } catch (e) {
+      return tasks;
+    }
+  }, [tasks]);
 
   const { data: staff = [], isLoading: staffLoading } = useQuery({
     queryKey: ['staff'],
@@ -73,12 +189,35 @@ export const Tasks = () => {
 
   const statusMutation = useMutation({
     mutationFn: ({ id, status }) => taskApi.updateStatus(id, { status }),
+    onMutate: async ({ id, status }) => {
+      // Cancel any outgoing refetches so they don't overwrite our optimistic update
+      await queryClient.cancelQueries({ queryKey: ['tasks'] });
+
+      // Snapshot the previous value
+      const previousTasks = queryClient.getQueryData(['tasks']);
+
+      // Optimistically update to the new value
+      queryClient.setQueryData(['tasks'], (old) => {
+        if (!old) return [];
+        return old.map((t) => (t.id === id ? { ...t, status } : t));
+      });
+
+      // Return a context object with the snapshotted value
+      return { previousTasks };
+    },
+    onError: (err, newTodo, context) => {
+      // If the mutation fails, use the context returned from onMutate to roll back
+      if (context?.previousTasks) {
+        queryClient.setQueryData(['tasks'], context.previousTasks);
+      }
+      addToast(err?.message || 'Failed to update status', 'error');
+    },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['tasks'] });
       addToast('Task status updated', 'success');
     },
-    onError: (err) => {
-      addToast(err?.message || 'Failed to update status', 'error');
+    onSettled: () => {
+      // Always refetch after success or error to ensure server sync
+      queryClient.invalidateQueries({ queryKey: ['tasks'] });
     },
   });
 
@@ -98,7 +237,7 @@ export const Tasks = () => {
 
   // ── Group tasks by status ─────────────────────────────────────
   const grouped = COLUMN_CONFIG.reduce((acc, col) => {
-    acc[col.key] = tasks.filter(t => t.status === col.key);
+    acc[col.key] = sortedTasks.filter(t => t.status === col.key);
     return acc;
   }, {});
 
@@ -144,7 +283,14 @@ export const Tasks = () => {
             return (
               <div
                 key={col.key}
-                className="bg-slate-50 dark:bg-slate-900/40 border border-slate-200/60 dark:border-slate-800 rounded-2xl p-4 flex flex-col h-[72vh]"
+                onDragOver={(e) => handleDragOver(e, col.key)}
+                onDragLeave={(e) => handleDragLeave(e, col.key)}
+                onDrop={(e) => handleDrop(e, col.key)}
+                className={`bg-slate-50 dark:bg-slate-900/40 border rounded-2xl p-4 flex flex-col h-[72vh] transition-all duration-300 ${
+                  activeDropCol === col.key
+                    ? 'border-blue-500/50 bg-blue-500/5 dark:bg-blue-500/10 ring-2 ring-blue-500/20'
+                    : 'border-slate-200/60 dark:border-slate-800'
+                }`}
               >
                 {/* Column header */}
                 <div className="flex items-center justify-between mb-4 pb-2 border-b border-slate-200 dark:border-slate-800">
@@ -172,10 +318,18 @@ export const Tasks = () => {
                           initial={{ opacity: 0, y: 8 }}
                           animate={{ opacity: 1, y: 0 }}
                           exit={{ opacity: 0, scale: 0.95 }}
-                          className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-4 rounded-xl shadow-sm space-y-3 relative group"
+                          draggable
+                          onDragStart={(e) => handleDragStart(e, task.id)}
+                          onDragEnd={handleDragEnd}
+                          onDragOver={(e) => handleDragOverCard(e, task)}
+                          className={`bg-white dark:bg-slate-900 border p-4 rounded-xl shadow-sm space-y-3 relative group transition-all duration-200 cursor-grab active:cursor-grabbing ${
+                            draggingTaskId === task.id
+                              ? 'opacity-40 border-dashed border-blue-500/70 scale-95 shadow-none'
+                              : 'border-slate-200 dark:border-slate-800'
+                          }`}
                         >
                           {/* Title + delete */}
-                          <div className="flex justify-between items-start gap-2">
+                          <div className={`flex justify-between items-start gap-2 ${draggingTaskId ? 'pointer-events-none' : ''}`}>
                             <p className="text-xs font-bold text-slate-800 dark:text-slate-200 leading-snug flex-1">
                               {task.title}
                             </p>
@@ -189,13 +343,13 @@ export const Tasks = () => {
                           </div>
 
                           {task.description && (
-                            <p className="text-[11px] text-slate-400 dark:text-slate-500 leading-relaxed line-clamp-2">
+                            <p className={`text-[11px] text-slate-400 dark:text-slate-500 leading-relaxed line-clamp-2 ${draggingTaskId ? 'pointer-events-none' : ''}`}>
                               {task.description}
                             </p>
                           )}
 
                           {/* Meta row */}
-                          <div className="flex flex-wrap items-center justify-between gap-2 border-t pt-2 border-slate-100 dark:border-slate-800">
+                          <div className={`flex flex-wrap items-center justify-between gap-2 border-t pt-2 border-slate-100 dark:border-slate-800 ${draggingTaskId ? 'pointer-events-none' : ''}`}>
                             <div className="flex items-center gap-1.5 text-[10px] text-slate-500 dark:text-slate-400 font-semibold">
                               <FiUser className="flex-shrink-0" />
                               {/* Use assignedToName from normalized task (set from backend populate) */}
@@ -218,7 +372,7 @@ export const Tasks = () => {
                           </div>
 
                           {/* Action buttons */}
-                          <div className="flex justify-end gap-2 border-t pt-2 border-slate-100 dark:border-slate-800/40">
+                          <div className={`flex justify-end gap-2 border-t pt-2 border-slate-100 dark:border-slate-800/40 ${draggingTaskId ? 'pointer-events-none' : ''}`}>
                             {task.status === TASK_STATUS.PENDING && (
                               <button
                                 onClick={() => statusMutation.mutate({ id: task.id, status: TASK_STATUS.IN_PROGRESS })}

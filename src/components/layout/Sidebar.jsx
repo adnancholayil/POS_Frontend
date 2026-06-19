@@ -1,6 +1,7 @@
 import React from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useQuery } from '@tanstack/react-query';
 import {
   FiGrid, FiBox, FiPackage, FiShoppingCart, FiTool, FiUsers,
   FiUserCheck, FiCheckSquare, FiBarChart2, FiSettings, FiShield,
@@ -13,6 +14,7 @@ import { useAuth } from '../../hooks/useAuth';
 import { Avatar } from '../ui/Badge';
 import { cn } from '../../utils/helpers';
 import { useState } from 'react';
+import { settingsApi } from '../../api/services';
 
 const APP_NAME = 'Galaxy POS';
 
@@ -184,7 +186,18 @@ export const Sidebar = ({ isOpen, collapsed, onClose }) => {
   const dispatch = useDispatch();
   const { user, role } = useAuth();
 
-  const filteredItems = navItems.filter((item) => item.roles?.includes(role));
+  const { data: shopSettings } = useQuery({
+    queryKey: ['shopSettings'],
+    queryFn: () => settingsApi.getShop().then(res => res.data),
+  });
+
+  const filteredItems = navItems.filter((item) => {
+    if (shopSettings?.pageAccess) {
+      const allowedRoles = shopSettings.pageAccess[item.label] || [];
+      return allowedRoles.includes(role);
+    }
+    return item.roles?.includes(role);
+  });
 
   const handleLogout = () => {
     dispatch(logout());

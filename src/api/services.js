@@ -1081,7 +1081,22 @@ export const settingsApi = {
         primaryColorGradient: d.primaryColorGradient || { from: '#06b6d4', to: '#3b82f6', angle: '135deg' },
         secondaryColorType: d.secondaryColorType || 'solid',
         secondaryColorSolid: d.secondaryColorSolid || '#8b5cf6',
-        secondaryColorGradient: d.secondaryColorGradient || { from: '#8b5cf6', to: '#ec4899', angle: '135deg' }
+        secondaryColorGradient: d.secondaryColorGradient || { from: '#8b5cf6', to: '#ec4899', angle: '135deg' },
+        pageAccess: d.pageAccess || {
+          'Dashboard': ['admin', 'manager', 'salesman'],
+          'Products': ['admin', 'manager'],
+          'Inventory': ['admin', 'manager'],
+          'Purchases': ['admin', 'manager'],
+          'Sales / POS': ['admin', 'manager', 'salesman'],
+          'Service Center': ['admin', 'manager', 'salesman'],
+          'Customers': ['admin', 'manager', 'salesman'],
+          'Second Hand': ['admin', 'manager'],
+          'Warranty': ['admin', 'manager'],
+          'Staff': ['admin', 'manager'],
+          'Tasks': ['admin', 'manager', 'salesman'],
+          'Reports': ['admin', 'manager'],
+          'Settings': ['admin', 'manager', 'salesman']
+        }
       }
     };
   }),
@@ -1105,7 +1120,8 @@ export const settingsApi = {
       primaryColorGradient: data.primaryColorGradient,
       secondaryColorType: data.secondaryColorType,
       secondaryColorSolid: data.secondaryColorSolid,
-      secondaryColorGradient: data.secondaryColorGradient
+      secondaryColorGradient: data.secondaryColorGradient,
+      pageAccess: data.pageAccess
     };
     return api.put('/settings', backendData);
   },

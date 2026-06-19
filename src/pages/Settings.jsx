@@ -5,12 +5,13 @@ import {
   FiSettings, FiShield, FiSave, FiCheck,
   FiPrinter, FiFileText, FiSmartphone, FiSliders,
   FiShoppingCart, FiTruck, FiInfo, FiLayers,
-  FiRefreshCw, FiSun, FiMoon, FiEye, FiPlus, FiTrendingUp, FiTool, FiGrid
+  FiRefreshCw, FiSun, FiMoon, FiEye, FiPlus, FiTrendingUp, FiTool, FiGrid, FiCheckSquare
 } from 'react-icons/fi';
 import { settingsApi } from '../api/services';
 import { Input, Textarea } from '../components/ui/Input';
 import { Button } from '../components/ui/Button';
 import { useToast } from '../hooks/useToast';
+import { useAuth } from '../hooks/useAuth';
 
 // ─── Compact Print Type Button ────────────────────────────────────────────────
 const PrintTypeCard = ({ value, current, onClick, icon, title }) => {
@@ -95,11 +96,15 @@ const GRADIENT_PRESETS = [
 export const Settings = () => {
   const queryClient = useQueryClient();
   const { addToast } = useToast();
+  const { user } = useAuth();
+  const isAdmin = (typeof user?.role === 'object' && user?.role !== null ? user?.role?.name : user?.role) === 'admin';
+
   const [activeTab, setActiveTab] = React.useState('shop');
 
   // Separate print type states
   const [salesPrintType, setSalesPrintType] = React.useState('thermal');
   const [purchasePrintType, setPurchasePrintType] = React.useState('thermal');
+  const [pageAccess, setPageAccess] = React.useState({});
 
   // Customization States
   const [primaryType, setPrimaryType] = React.useState('solid'); // 'solid' | 'gradient'
@@ -181,6 +186,8 @@ export const Settings = () => {
       if (shopSettings.secondaryColorType) setSecondaryType(shopSettings.secondaryColorType);
       if (shopSettings.secondaryColorSolid) setSecondarySolid(shopSettings.secondaryColorSolid);
       if (shopSettings.secondaryColorGradient) setSecondaryGradient(shopSettings.secondaryColorGradient);
+
+      if (shopSettings.pageAccess) setPageAccess(shopSettings.pageAccess);
     }
   }, [shopSettings, resetShop]);
 
@@ -214,6 +221,7 @@ export const Settings = () => {
       secondaryColorType: secondaryType,
       secondaryColorSolid: secondarySolid,
       secondaryColorGradient: secondaryGradient,
+      pageAccess: pageAccess || shopSettings?.pageAccess,
     });
   };
 
@@ -238,6 +246,7 @@ export const Settings = () => {
       secondaryColorType: secondaryType,
       secondaryColorSolid: secondarySolid,
       secondaryColorGradient: secondaryGradient,
+      pageAccess: pageAccess || shopSettings?.pageAccess,
     });
   };
 
@@ -254,16 +263,17 @@ export const Settings = () => {
       </div>
 
       {/* Tabs */}
-      <div className="flex border-b border-slate-200 dark:border-slate-800 gap-1">
+      <div className="flex border-b border-slate-200 dark:border-slate-800 gap-1 overflow-x-auto no-scrollbar">
         {[
           { id: 'shop', label: 'Shop & Printing', icon: <FiSliders /> },
           { id: 'security', label: 'Account Security', icon: <FiShield /> },
           { id: 'customization', label: 'Website Customization', icon: <FiLayers /> },
+          ...(isAdmin ? [{ id: 'permissions', label: 'Page Permissions', icon: <FiCheckSquare /> }] : []),
         ].map(tab => (
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id)}
-            className={`pb-3 px-4 text-sm font-bold border-b-2 transition-all flex items-center gap-2 ${
+            className={`pb-3 px-4 text-sm font-bold border-b-2 transition-all flex items-center gap-2 shrink-0 ${
               activeTab === tab.id
                 ? 'border-violet-600 text-violet-600 dark:text-violet-400'
                 : 'border-transparent text-slate-400 hover:text-slate-600 dark:hover:text-slate-300'
@@ -1034,6 +1044,106 @@ export const Settings = () => {
 
                 </div>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ─── PAGE PERMISSIONS TAB ─── */}
+      {activeTab === 'permissions' && isAdmin && (
+        <div className="max-w-4xl mx-auto space-y-6">
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm">
+            <div className="flex items-center gap-2 border-b border-slate-100 dark:border-slate-800 pb-3 mb-6">
+              <FiCheckSquare className="text-violet-500 text-lg" />
+              <div>
+                <h2 className="text-sm font-black text-slate-800 dark:text-slate-100 uppercase tracking-wider">
+                  Role-Based Page Access Management
+                </h2>
+                <p className="text-[11px] text-slate-400 mt-0.5">
+                  Configure which pages are visible and accessible to each user role.
+                </p>
+              </div>
+            </div>
+
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  <tr className="border-b border-slate-200 dark:border-slate-800 text-[11px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">
+                    <th className="pb-3 pl-4">System Page</th>
+                    <th className="pb-3 text-center">Admin</th>
+                    <th className="pb-3 text-center">Manager</th>
+                    <th className="pb-3 text-center">Salesman</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60">
+                  {[
+                    'Dashboard',
+                    'Products',
+                    'Inventory',
+                    'Purchases',
+                    'Sales / POS',
+                    'Service Center',
+                    'Customers',
+                    'Second Hand',
+                    'Warranty',
+                    'Staff',
+                    'Tasks',
+                    'Reports',
+                    'Settings'
+                  ].map(page => (
+                    <tr key={page} className="hover:bg-slate-50/40 dark:hover:bg-slate-800/10 transition-colors">
+                      <td className="py-3.5 pl-4 font-semibold text-xs text-slate-700 dark:text-slate-300">
+                        {page}
+                      </td>
+                      {['admin', 'manager', 'salesman'].map(roleKey => {
+                        const isSettingsAdmin = page === 'Settings' && roleKey === 'admin';
+                        const checked = pageAccess[page]?.includes(roleKey) || false;
+                        
+                        return (
+                          <td key={roleKey} className="py-3.5 text-center">
+                            <input
+                              type="checkbox"
+                              checked={checked}
+                              disabled={isSettingsAdmin} // Admin settings access cannot be removed
+                              onChange={(e) => {
+                                const isChecked = e.target.checked;
+                                setPageAccess(prev => {
+                                  const currentRoles = prev[page] || [];
+                                  const updatedRoles = isChecked
+                                    ? [...currentRoles, roleKey]
+                                    : currentRoles.filter(r => r !== roleKey);
+                                  
+                                  return {
+                                    ...prev,
+                                    [page]: updatedRoles
+                                  };
+                                });
+                              }}
+                              className="w-4 h-4 text-violet-600 bg-gray-100 border-gray-300 rounded focus:ring-violet-500 focus:ring-2 dark:focus:ring-violet-600 dark:ring-offset-gray-800 focus:ring-offset-2 dark:bg-gray-700 dark:border-gray-600 cursor-pointer disabled:cursor-not-allowed disabled:opacity-50"
+                            />
+                          </td>
+                        );
+                      })}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            <div className="flex justify-end pt-6 border-t border-slate-100 dark:border-slate-800 mt-6">
+              <Button
+                onClick={() => {
+                  updateShopMutation.mutate({
+                    ...shopSettings,
+                    pageAccess
+                  });
+                }}
+                variant="primary"
+                className="rounded-xl px-6"
+                loading={updateShopMutation.isPending}
+              >
+                <FiSave className="mr-1" /> Save Permissions Matrix
+              </Button>
             </div>
           </div>
         </div>
